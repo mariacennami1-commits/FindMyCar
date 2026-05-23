@@ -1,54 +1,61 @@
-import numpy as np
-from kivy.logger import Logger
+import math
 
 
 class KalmanFilter:
     def __init__(self):
         self.dt = 1.0
-        self.A = np.array([[1, 0, self.dt, 0],
-                           [0, 1, 0, self.dt],
-                           [0, 0, 1, 0],
-                           [0, 0, 0, 1]])
-        self.H = np.array([[1, 0, 0, 0],
-                           [0, 1, 0, 0]])
-        self.Q = np.eye(4) * 0.1
-        self.R = np.eye(2) * 5.0
-        self.P = np.eye(4) * 100.0
-        self.x = np.zeros((4, 1))
+        self.x = [0.0, 0.0, 0.0, 0.0]
+        self.P = [[100.0, 0, 0, 0],
+                  [0, 100.0, 0, 0],
+                  [0, 0, 100.0, 0],
+                  [0, 0, 0, 100.0]]
+        self.Q = 0.1
+        self.R = 5.0
         self.initialized = False
 
     def initialize(self, lat, lon):
-        self.x = np.array([[lat], [lon], [0], [0]], dtype=float)
+        self.x = [lat, lon, 0.0, 0.0]
         self.initialized = True
 
     def predict(self, step_length=0, heading=0):
         if not self.initialized:
             return None
 
-        vx = step_length * np.sin(np.radians(heading))
-        vy = step_length * np.cos(np.radians(heading))
+        vx = step_length * math.sin(math.radians(heading))
+        vy = step_length * math.cos(math.radians(heading))
 
         self.x[2] = vx
         self.x[3] = vy
 
-        self.x = self.A @ self.x
-        self.P = self.A @ self.P @ self.A.T + self.Q
-        return (float(self.x[0]), float(self.x[1]))
+        self.x[0] += self.x[2] * self.dt
+        self.x[1] += self.x[3] * self.dt
+
+        for i in range(4):
+            self.P[i][i] += self.Q
+
+        return (self.x[0], self.x[1])
 
     def update(self, lat, lon):
         if not self.initialized:
             self.initialize(lat, lon)
             return (lat, lon)
 
-        z = np.array([[lat], [lon]], dtype=float)
-        y = z - self.H @ self.x
-        S = self.H @ self.P @ self.H.T + self.R
-        K = self.P @ self.H.T @ np.linalg.inv(S)
+        y_lat = lat - self.x[0]
+        y_lon = lon - self.x[1]
 
-        self.x = self.x + K @ y
-        self.P = (np.eye(4) - K @ self.H) @ self.P
+        S_lat = self.P[0][0] + self.R
+        S_lon = self.P[1][1] + self.R
 
-        return (float(self.x[0]), float(self.x[1]))
+        K_lat = self.P[0][0] / S_lat
+        K_lon = self.P[1][1] / S_lon
+
+        self.x[0] += K_lat * y_lat
+        self.x[1] += K_lon * y_lon
+
+        self.P[0][0] = (1 - K_lat) * self.P[0][0]
+        self.P[1][1] = (1 - K_lon) * self.P[1][1]
+
+        return (self.x[0], self.x[1])
 
 
 class SensorFusion:
@@ -62,7 +69,7 @@ class SensorFusion:
         self.is_moving = False
 
     def process_accelerometer(self, x, y, z):
-        magnitude = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+        magnitude = math.sqrt(x ** 2 + y ** 2 + z ** 2)
         if self.last_accel_magnitude == 0:
             self.last_accel_magnitude = magnitude
             return False
@@ -90,7 +97,7 @@ class SensorFusion:
 
     def get_estimated_position(self):
         if self.kalman.initialized:
-            return (float(self.kalman.x[0]), float(self.kalman.x[1]))
+            return (self.kalman.x[0], self.kalman.x[1])
         return None
 
     def reset(self, lat=None, lon=None):
