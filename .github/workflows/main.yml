@@ -1,0 +1,7 @@
+cd C:\Users\Maria\find_my_car
+git init
+git add .
+git commit -m "Primo commit"
+git remote add origin https://github.com/TUO-UTENTE/FindMyCar.git
+git branch -M main
+git push -u origin main
