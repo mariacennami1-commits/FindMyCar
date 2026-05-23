@@ -5,7 +5,7 @@ package.domain = com.findmycar
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 version = 1.0.0
-requirements = python3,kivy>=2.3.0,kivymd>=2.0.1,plyer>=2.1.0,requests>=2.31.0,numpy>=1.24.0,scipy>=1.11.0,pillow>=10.0.0,pyjnius
+requirements = python3,kivy,kivymd,plyer,requests,numpy,pyjnius
 orientation = portrait
 osx.python_version = 3
 osx.kivy_version = 2.3.0
