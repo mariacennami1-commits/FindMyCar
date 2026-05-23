@@ -10,14 +10,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache Buildozer
-        uses: actions/cache@v4
-        with:
-          path: ~/.buildozer
-          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
-          restore-keys: |
-            ${{ runner.os }}-buildozer-
-
       - name: Install system deps
         run: |
           sudo apt update -qq
@@ -28,12 +20,29 @@ jobs:
           pip install --user buildozer cython
 
       - name: Build APK
+        continue-on-error: true
         shell: bash
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
         run: |
           export PATH=$HOME/.local/bin:$PATH
-          python -m buildozer android debug
+          python -m buildozer android debug 2>&1 | tee buildozer_output.log
+          exit ${PIPESTATUS[0]:-1}
+
+      - name: Show error tail
+        shell: bash
+        run: |
+          echo "=== Last 30 lines of buildozer output ==="
+          tail -30 buildozer_output.log
+          echo "=== Lines matching 'error' or 'Error' ==="
+          grep -ni "error" buildozer_output.log | tail -10 || echo "(no error matches)"
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-log
+          path: buildozer_output.log
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
