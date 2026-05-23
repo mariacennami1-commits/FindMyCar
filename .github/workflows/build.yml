@@ -1,12 +1,15 @@
 name: Build
 on: [push, pull_request]
+
 jobs:
   build-android:
     name: Build APK
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Cache Buildozer
         uses: actions/cache@v4
         with:
@@ -14,22 +17,34 @@ jobs:
           key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
           restore-keys: |
             ${{ runner.os }}-buildozer-
+
       - name: Install system deps
         run: |
           sudo apt update -qq
-          sudo apt install -y -qq git zip unzip autoconf libtool pkg-config zlib1g-dev cmake libffi-dev libssl-dev openjdk-17-jdk
+          sudo apt install -y -qq git zip unzip autoconf libtool pkg-config zlib1g-dev cmake libffi-dev libssl-dev openjdk-17-jdk python3-pip python3-setuptools
+
       - name: Install Buildozer
         run: |
           pip install --user buildozer cython
+
+      - name: Check environment
+        shell: bash
+        run: |
+          echo "=== Python ==="
+          python --version
+          echo "=== Java ==="
+          java -version 2>&1
+          echo "=== JAVA_HOME ==="
+          ls -la /usr/lib/jvm/ 2>/dev/null || echo "no jvm dir"
+          echo "=== Pip ==="
+          pip --version
+          echo "=== Buildozer ==="
+          python -m buildozer --version 2>&1 || echo "buildozer version check failed"
+
       - name: Build APK
         shell: bash
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
         run: |
           export PATH=$HOME/.local/bin:$PATH
-          python -m buildozer android debug
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: FindMyCar-APK
-          path: bin/*.apk
+          python -m buildozer --verbose android debug 2>&1
