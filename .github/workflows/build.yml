@@ -13,11 +13,24 @@ jobs:
       - name: Install system deps
         run: |
           sudo apt update -qq
-          sudo apt install -y -qq git zip unzip autoconf libtool pkg-config zlib1g-dev cmake libffi-dev libssl-dev openjdk-17-jdk python3-pip python3-setuptools
+          sudo apt install -y -qq git zip unzip autoconf libtool pkg-config zlib1g-dev cmake libffi-dev libssl-dev openjdk-17-jdk python3-pip python3-setuptools python-is-python3
+
+      - name: Check Python
+        run: |
+          echo "python: $(which python 2>&1 || echo 'NOT FOUND')"
+          echo "python3: $(which python3 2>&1 || echo 'NOT FOUND')"
+          python --version
+          python3 --version
 
       - name: Install Buildozer
         run: |
-          pip install --user buildozer cython
+          python -m pip install --user buildozer cython
+
+      - name: Verify Buildozer
+        run: |
+          export PATH=$HOME/.local/bin:$PATH
+          which buildozer 2>/dev/null || echo "no buildozer bin"
+          python -m buildozer --version 2>/dev/null || python3 -m buildozer --version 2>/dev/null || echo "buildozer not found"
 
       - name: Build APK
         shell: bash
@@ -25,27 +38,24 @@ jobs:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
         run: |
           export PATH=$HOME/.local/bin:$PATH
-          python -m buildozer android debug 2>&1 | tee buildozer_output.log
+          python3 -m buildozer android debug 2>&1 | tee buildozer_output.log
 
       - name: Show build result
         if: always()
         shell: bash
         run: |
           echo "=== Last 50 lines of buildozer output ==="
-          tail -50 buildozer_output.log
+          tail -50 buildozer_output.log 2>/dev/null || echo "(no log file)"
           echo "=== Looking for APK files ==="
           find . -name "*.apk" -type f 2>/dev/null
-          echo "=== bin/ directory ==="
-          ls -laR bin/ 2>/dev/null || echo "bin/ not found"
+          ls -la bin/ 2>/dev/null || echo "bin/ not found"
 
       - name: Upload build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: buildozer-log
-          path: |
-            buildozer_output.log
-            .buildozer/*.log
+          path: buildozer_output.log
 
       - name: Upload APK
         if: always()
