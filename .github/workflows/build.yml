@@ -10,15 +10,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build with Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          workdir: .
-          buildozer_version: stable
+          python-version: "3.11"
+
+      - name: Cache Buildozer
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildozer
+            .buildozer
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+
+      - name: Install Buildozer
+        run: |
+          pip install --user buildozer cython
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y git zip unzip openjdk-17-jdk python3-distutils python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+
+      - name: Build APK
+        run: |
+          python -m buildozer android debug
+        env:
+          BUILD_DIR: /home/runner/.buildozer
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: FindMyCar-APK
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: bin/*.apk
