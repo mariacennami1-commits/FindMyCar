@@ -34,17 +34,40 @@ jobs:
           python --version
           echo "=== Java ==="
           java -version 2>&1
-          echo "=== JAVA_HOME ==="
-          ls -la /usr/lib/jvm/ 2>/dev/null || echo "no jvm dir"
+          echo "=== Disk ==="
+          df -h /
           echo "=== Pip ==="
           pip --version
-          echo "=== Buildozer ==="
-          python -m buildozer --version 2>&1 || echo "buildozer version check failed"
 
       - name: Build APK
+        id: build
+        continue-on-error: true
         shell: bash
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
         run: |
           export PATH=$HOME/.local/bin:$PATH
-          python -m buildozer --verbose android debug 2>&1
+          python -m buildozer android debug 2>&1 | tee buildozer_output.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Show buildozer log
+        if: always()
+        shell: bash
+        run: |
+          echo "=== Last 100 lines of buildozer output ==="
+          tail -100 buildozer_output.log 2>/dev/null || echo "No output file"
+          echo "=== Buildozer internal logs ==="
+          find ~/.buildozer -name "*.log" -o -name "*.txt" 2>/dev/null | head -5
+          for log in $(find ~/.buildozer -name "*.log" 2>/dev/null | head -3); do
+            echo "--- Log: $log ---"
+            tail -50 "$log"
+          done
+
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-logs
+          path: |
+            buildozer_output.log
+            .buildozer/*.log
