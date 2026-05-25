@@ -11,6 +11,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Cache Buildozer
+        id: cache
         uses: actions/cache@v4
         with:
           path: ~/.buildozer
@@ -28,28 +29,51 @@ jobs:
           python -m pip install --user buildozer cython
 
       - name: Download Android SDK & NDK
-        id: setup
         shell: bash
+        env:
+          ANDROID_SDK_ROOT: ~/.buildozer/android/sdk
+          ANDROID_HOME: ~/.buildozer/android/sdk
         run: |
           set -e
+          # Skip if already downloaded
+          if [ -f ~/.buildozer/android/sdk/platforms/android-34/android.jar ] && \
+             [ -d ~/.buildozer/android/ndk/toolchains ]; then
+            echo "=== SDK/NDK already present, skipping download ==="
+            exit 0
+          fi
           mkdir -p ~/.buildozer/android
-          echo "=== Try URL 1 ==="
-          curl -sLI "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip" | head -5 || echo "FAILED"
-          echo "=== Try URL 2 (older) ==="
-          curl -sLI "https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip" | head -5 || echo "FAILED"
-          echo "=== Try NDK r25c ==="
-          curl -sLI "https://dl.google.com/android/repository/android-ndk-r25c-linux.zip" | head -5 || echo "FAILED"
-          echo "=== Try NDK r26b ==="
-          curl -sLI "https://dl.google.com/android/repository/android-ndk-r26b-linux.zip" | head -5 || echo "FAILED"
-          echo "=== Try NDK r27 ==="
-          curl -sLI "https://dl.google.com/android/repository/android-ndk-r27-linux.zip" | head -5 || echo "FAILED"
-          echo "=== Test network ==="
-          curl -sI "https://google.com" | head -3
+          echo "=== SDK command line tools ==="
+          curl -sL -o /tmp/sdk.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q /tmp/sdk.zip -d /tmp/sdk-tools
+          mkdir -p ~/.buildozer/android/sdk/cmdline-tools
+          mv /tmp/sdk-tools/cmdline-tools ~/.buildozer/android/sdk/cmdline-tools/latest
+          echo "=== Install Android platform & build tools ==="
+          yes | ~/.buildozer/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/sdk "platforms;android-34" "build-tools;34.0.0" > /dev/null 2>&1
+          echo "=== NDK r25c ==="
+          curl -sL -o /tmp/ndk.zip https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
+          unzip -q /tmp/ndk.zip -d /tmp/ndk
+          mkdir -p ~/.buildozer/android/ndk
+          cp -r /tmp/ndk/android-ndk-r25c/* ~/.buildozer/android/ndk/
+          rm -rf /tmp/sdk.zip /tmp/sdk-tools /tmp/ndk.zip /tmp/ndk
+          echo "=== SDK/NDK ready ==="
+
+      - name: Debug SDK path
+        shell: bash
+        run: |
+          echo "=== SDK contents ==="
+          ls -la ~/.buildozer/android/sdk/ 2>/dev/null || echo "no sdk dir"
+          ls ~/.buildozer/android/sdk/platforms/ 2>/dev/null || echo "no platforms"
+          ls ~/.buildozer/android/sdk/build-tools/ 2>/dev/null || echo "no build-tools"
+          echo "=== NDK contents ==="
+          ls -la ~/.buildozer/android/ndk/ 2>/dev/null || echo "no ndk dir"
+          ls ~/.buildozer/android/ndk/toolchains/ 2>/dev/null || echo "no toolchains"
 
       - name: Build APK
         shell: bash
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+          ANDROID_SDK_ROOT: $HOME/.buildozer/android/sdk
+          ANDROID_HOME: $HOME/.buildozer/android/sdk
         run: |
           export PATH=$HOME/.local/bin:$PATH
           python3 -m buildozer android debug
