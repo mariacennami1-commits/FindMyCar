@@ -31,19 +31,20 @@ jobs:
         id: setup
         shell: bash
         run: |
+          set -e
           mkdir -p ~/.buildozer/android
-          echo "=== Download SDK tools ==="
-          curl -sL -o /tmp/sdk.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip -q /tmp/sdk.zip -d /tmp/sdk-tools
-          mkdir -p ~/.buildozer/android/sdk/cmdline-tools
-          mv /tmp/sdk-tools/cmdline-tools ~/.buildozer/android/sdk/cmdline-tools/latest
-          echo "=== Download NDK r25c ==="
-          curl -sL -o /tmp/ndk.zip https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
-          unzip -q /tmp/ndk.zip -d ~/.buildozer/android/ndk
-          mv ~/.buildozer/android/ndk/android-ndk-r25c ~/.buildozer/android/ndk/r25c
-          echo "=== Install Android 34 platform ==="
-          yes | ~/.buildozer/android/sdk/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" > /dev/null 2>&1
-          echo "=== SDK/NDK ready ==="
+          echo "=== Try URL 1 ==="
+          curl -sLI "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip" | head -5 || echo "FAILED"
+          echo "=== Try URL 2 (older) ==="
+          curl -sLI "https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip" | head -5 || echo "FAILED"
+          echo "=== Try NDK r25c ==="
+          curl -sLI "https://dl.google.com/android/repository/android-ndk-r25c-linux.zip" | head -5 || echo "FAILED"
+          echo "=== Try NDK r26b ==="
+          curl -sLI "https://dl.google.com/android/repository/android-ndk-r26b-linux.zip" | head -5 || echo "FAILED"
+          echo "=== Try NDK r27 ==="
+          curl -sLI "https://dl.google.com/android/repository/android-ndk-r27-linux.zip" | head -5 || echo "FAILED"
+          echo "=== Test network ==="
+          curl -sI "https://google.com" | head -3
 
       - name: Build APK
         shell: bash
