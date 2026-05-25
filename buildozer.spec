@@ -13,8 +13,10 @@ fullscreen = 0
 
 android.api = 34
 android.minapi = 21
-android.ndk = r27
+android.ndk = r25c
 android.archs = arm64-v8a
+android.sdk_path = ~/.buildozer/android/sdk
+android.ndk_path = ~/.buildozer/android/ndk
 android.permissions = ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, ACCESS_BACKGROUND_LOCATION, CAMERA, INTERNET
 android.gradle_api_version = 34
 android.wakelock = True
