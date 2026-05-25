@@ -29,12 +29,13 @@ jobs:
           python -m pip install --user buildozer cython
 
       - name: Download Android SDK & NDK
+        continue-on-error: true
         shell: bash
         env:
           ANDROID_SDK_ROOT: ~/.buildozer/android/sdk
           ANDROID_HOME: ~/.buildozer/android/sdk
         run: |
-          set -e
+          set -x -e
           # Skip if already downloaded
           if [ -f ~/.buildozer/android/sdk/platforms/android-34/android.jar ] && \
              [ -d ~/.buildozer/android/ndk/toolchains ]; then
@@ -42,15 +43,21 @@ jobs:
             exit 0
           fi
           mkdir -p ~/.buildozer/android
-          echo "=== SDK command line tools ==="
-          curl -sL -o /tmp/sdk.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          echo "=== Step 1: SDK command line tools ==="
+          if ! curl -sL -o /tmp/sdk.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip; then
+            echo "FAILED: SDK tools download"
+            exit 1
+          fi
           unzip -q /tmp/sdk.zip -d /tmp/sdk-tools
           mkdir -p ~/.buildozer/android/sdk/cmdline-tools
           mv /tmp/sdk-tools/cmdline-tools ~/.buildozer/android/sdk/cmdline-tools/latest
-          echo "=== Install Android platform & build tools ==="
-          yes | ~/.buildozer/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/sdk "platforms;android-34" "build-tools;34.0.0" > /dev/null 2>&1
-          echo "=== NDK r25c ==="
-          curl -sL -o /tmp/ndk.zip https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
+          echo "=== Step 2: Android platform ==="
+          yes | ~/.buildozer/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/sdk "platforms;android-34" "build-tools;34.0.0"
+          echo "=== Step 3: NDK r25c ==="
+          if ! curl -sL -o /tmp/ndk.zip https://dl.google.com/android/repository/android-ndk-r25c-linux.zip; then
+            echo "FAILED: NDK download"
+            exit 1
+          fi
           unzip -q /tmp/ndk.zip -d /tmp/ndk
           mkdir -p ~/.buildozer/android/ndk
           cp -r /tmp/ndk/android-ndk-r25c/* ~/.buildozer/android/ndk/
@@ -72,11 +79,11 @@ jobs:
         shell: bash
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
-          ANDROID_SDK_ROOT: $HOME/.buildozer/android/sdk
-          ANDROID_HOME: $HOME/.buildozer/android/sdk
         run: |
           export PATH=$HOME/.local/bin:$PATH
-          python3 -m buildozer android debug
+          SDK_PATH="$HOME/.buildozer/android/sdk"
+          NDK_PATH="$HOME/.buildozer/android/ndk"
+          python3 -m buildozer --set "android.sdk_path=$SDK_PATH" --set "android.ndk_path=$NDK_PATH" android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

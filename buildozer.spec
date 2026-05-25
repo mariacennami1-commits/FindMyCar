@@ -15,8 +15,7 @@ android.api = 34
 android.minapi = 21
 android.ndk = r25c
 android.archs = arm64-v8a
-android.sdk_path = ~/.buildozer/android/sdk
-android.ndk_path = ~/.buildozer/android/ndk
+# android.sdk_path and android.ndk_path set via workflow env vars
 android.permissions = ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, ACCESS_BACKGROUND_LOCATION, CAMERA, INTERNET
 android.gradle_api_version = 34
 android.wakelock = True
