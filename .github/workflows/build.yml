@@ -88,8 +88,12 @@ jobs:
         shell: bash
         run: |
           if [ -f buildozer_output.log ]; then
-            echo "=== Buildozer full output ==="
-            cat buildozer_output.log
+            echo "=== Lines with 404/error/failed ==="
+            grep -inP "404|error|failed|not found|HTTPError|Cannot" buildozer_output.log | head -30
+            echo "=== Lines with download URL ==="
+            grep -inP "http.*\.zip|http.*\.tar|http.*\.gz|downloading|fetch" buildozer_output.log | head -20
+            echo "=== Last 30 lines ==="
+            tail -30 buildozer_output.log
           fi
 
       - name: Upload APK
