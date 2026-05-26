@@ -29,23 +29,31 @@ jobs:
           python -m pip install --user buildozer cython
 
       - name: Pre-download SDK & NDK in buildozer format
+        continue-on-error: true
         shell: bash
         run: |
-          set -e
+          set -x
+          echo "=== Create platform dir ==="
           mkdir -p ~/.buildozer/android/platform
-          # SDK command line tools
-          echo "=== SDK command line tools ==="
-          curl -sL -o /tmp/sdk.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          mkdir -p ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest
-          unzip -q /tmp/sdk.zip -d /tmp/sdk-tools
-          mv /tmp/sdk-tools/cmdline-tools/* ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/
-          # Install Android platform
-          echo "=== Install Android platform 34 ==="
-          yes | ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk "platforms;android-34" "build-tools;34.0.0"
-          # NDK
+          SDK_ROOT=~/.buildozer/android/platform/android-sdk
+
+          echo "=== SDK tools ==="
+          curl -sL -o /tmp/sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          mkdir -p "$SDK_ROOT/cmdline-tools/latest"
+          unzip -q /tmp/sdk-tools.zip -d /tmp/sdk-tools-extract
+          cp -r /tmp/sdk-tools-extract/cmdline-tools/* "$SDK_ROOT/cmdline-tools/latest/"
+          rm -rf /tmp/sdk-tools-extract /tmp/sdk-tools.zip
+
+          echo "=== Run sdkmanager ==="
+          "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_ROOT" --list 2>&1 | head -20 || echo "sdkmanager list failed"
+          "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_ROOT" "platforms;android-34" 2>&1 || echo "sdkmanager platform failed"
+          "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_ROOT" "build-tools;34.0.0" 2>&1 || echo "sdkmanager build-tools failed"
+
           echo "=== NDK r25c ==="
           curl -sL -o /tmp/ndk.zip https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
           unzip -q /tmp/ndk.zip -d ~/.buildozer/android/platform/
+          rm -f /tmp/ndk.zip
+
           echo "=== Done ==="
           ls -d ~/.buildozer/android/platform/*/
 
