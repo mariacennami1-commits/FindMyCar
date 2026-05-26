@@ -34,19 +34,20 @@ jobs:
           set -e
           mkdir -p ~/.buildozer/android/platform
           # SDK command line tools
-          echo "=== SDK tools ==="
+          echo "=== SDK command line tools ==="
           curl -sL -o /tmp/sdk.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          mkdir -p ~/.buildozer/android/platform/android-sdk
+          mkdir -p ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest
           unzip -q /tmp/sdk.zip -d /tmp/sdk-tools
-          mv /tmp/sdk-tools/cmdline-tools ~/.buildozer/android/platform/android-sdk/cmdline-tools
-          mv ~/.buildozer/android/platform/android-sdk/cmdline-tools ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest
+          mv /tmp/sdk-tools/cmdline-tools/* ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/
+          # Install Android platform
+          echo "=== Install Android platform 34 ==="
           yes | ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk "platforms;android-34" "build-tools;34.0.0"
           # NDK
           echo "=== NDK r25c ==="
           curl -sL -o /tmp/ndk.zip https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
           unzip -q /tmp/ndk.zip -d ~/.buildozer/android/platform/
-          echo "=== Pre-download done ==="
-          ls ~/.buildozer/android/platform/
+          echo "=== Done ==="
+          ls -d ~/.buildozer/android/platform/*/
 
       - name: Build APK
         shell: bash
