@@ -1,0 +1,101 @@
+name: Build
+on: [push, pull_request]
+
+jobs:
+  build-android:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Buildozer
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildozer
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            ${{ runner.os }}-buildozer-
+
+      - name: Install system deps
+        run: |
+          sudo apt update -qq
+          sudo apt install -y -qq git zip unzip autoconf libtool pkg-config zlib1g-dev cmake libffi-dev libssl-dev openjdk-17-jdk python3-pip python3-setuptools python-is-python3
+
+      - name: Install Buildozer
+        run: |
+          python -m pip install --user buildozer cython
+
+      - name: Download Android SDK & NDK
+        continue-on-error: true
+        shell: bash
+        env:
+          ANDROID_SDK_ROOT: ~/.buildozer/android/sdk
+          ANDROID_HOME: ~/.buildozer/android/sdk
+        run: |
+          set -x -e
+          # Skip if already downloaded
+          if [ -f ~/.buildozer/android/sdk/platforms/android-34/android.jar ] && \
+             [ -d ~/.buildozer/android/ndk/toolchains ]; then
+            echo "=== SDK/NDK already present, skipping download ==="
+            exit 0
+          fi
+          mkdir -p ~/.buildozer/android
+          echo "=== Step 1: SDK command line tools ==="
+          if ! curl -sL -o /tmp/sdk.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip; then
+            echo "FAILED: SDK tools download"
+            exit 1
+          fi
+          unzip -q /tmp/sdk.zip -d /tmp/sdk-tools
+          mkdir -p ~/.buildozer/android/sdk/cmdline-tools
+          mv /tmp/sdk-tools/cmdline-tools ~/.buildozer/android/sdk/cmdline-tools/latest
+          echo "=== Step 2: Android platform ==="
+          yes | ~/.buildozer/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/sdk "platforms;android-34" "build-tools;34.0.0"
+          echo "=== Step 3: NDK r25c ==="
+          if ! curl -sL -o /tmp/ndk.zip https://dl.google.com/android/repository/android-ndk-r25c-linux.zip; then
+            echo "FAILED: NDK download"
+            exit 1
+          fi
+          unzip -q /tmp/ndk.zip -d /tmp/ndk
+          mkdir -p ~/.buildozer/android/ndk
+          cp -r /tmp/ndk/android-ndk-r25c/* ~/.buildozer/android/ndk/
+          rm -rf /tmp/sdk.zip /tmp/sdk-tools /tmp/ndk.zip /tmp/ndk
+          echo "=== SDK/NDK ready ==="
+
+      - name: Debug SDK path
+        shell: bash
+        run: |
+          echo "=== SDK contents ==="
+          ls -la ~/.buildozer/android/sdk/ 2>/dev/null || echo "no sdk dir"
+          ls ~/.buildozer/android/sdk/platforms/ 2>/dev/null || echo "no platforms"
+          ls ~/.buildozer/android/sdk/build-tools/ 2>/dev/null || echo "no build-tools"
+          echo "=== NDK contents ==="
+          ls -la ~/.buildozer/android/ndk/ 2>/dev/null || echo "no ndk dir"
+          ls ~/.buildozer/android/ndk/toolchains/ 2>/dev/null || echo "no toolchains"
+
+      - name: Build APK
+        shell: bash
+        env:
+          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+        run: |
+          export PATH=$HOME/.local/bin:$PATH
+          python3 -m buildozer android debug 2>&1 | tee buildozer_output.log
+
+      - name: Show buildozer output
+        if: always()
+        shell: bash
+        run: |
+          if [ -f buildozer_output.log ]; then
+            echo "=== Buildozer full output ==="
+            cat buildozer_output.log
+          fi
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: FindMyCar-APK
+          path: |
+            bin/*.apk
+            *.apk
