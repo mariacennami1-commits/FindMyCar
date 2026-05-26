@@ -45,9 +45,9 @@ jobs:
           rm -rf /tmp/sdk-tools-extract /tmp/sdk-tools.zip
 
           echo "=== Run sdkmanager ==="
-          "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_ROOT" --list 2>&1 | head -20 || echo "sdkmanager list failed"
-          "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_ROOT" "platforms;android-34" 2>&1 || echo "sdkmanager platform failed"
-          "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_ROOT" "build-tools;34.0.0" 2>&1 || echo "sdkmanager build-tools failed"
+          "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_ROOT" --list 2>&1 | head -5 || echo "sdkmanager list failed"
+          echo y | "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_ROOT" "platforms;android-34" 2>&1 || echo "sdkmanager platform failed"
+          echo y | "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_ROOT" "build-tools;34.0.0" 2>&1 || echo "sdkmanager build-tools failed"
 
           echo "=== NDK r25c ==="
           curl -sL -o /tmp/ndk.zip https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
