@@ -81,9 +81,16 @@ jobs:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
         run: |
           export PATH=$HOME/.local/bin:$PATH
-          SDK_PATH="$HOME/.buildozer/android/sdk"
-          NDK_PATH="$HOME/.buildozer/android/ndk"
-          python3 -m buildozer --set "android.sdk_path=$SDK_PATH" --set "android.ndk_path=$NDK_PATH" android debug
+          python3 -m buildozer android debug 2>&1 | tee buildozer_output.log
+
+      - name: Show buildozer output
+        if: always()
+        shell: bash
+        run: |
+          if [ -f buildozer_output.log ]; then
+            echo "=== Buildozer full output ==="
+            cat buildozer_output.log
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
