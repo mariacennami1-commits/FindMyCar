@@ -95,8 +95,12 @@ jobs:
             tail -30 "$log"
             echo "=== Errors ==="
             grep -iP "404|error|failed|HTTPError|not found" "$log" 2>/dev/null | head -20 || echo "(no error matches)"
-            echo "=== Download URLs ==="
-            grep -iP "download|http.*\.(zip|tar\.gz)" "$log" 2>/dev/null | head -10 || echo "(no URL matches)"
+            echo "=== ALL HTTP URLs in log ==="
+            grep -oP 'https?://[^ ">)]+' "$log" 2>/dev/null | sort -u | head -20 || echo "(no URLs)"
+            echo "=== Lines around 404 ==="
+            grep -n "404" "$log" 2>/dev/null | head -5
+            echo "=== Lines around Downloading ==="
+            grep -n "Downloading\|download" "$log" 2>/dev/null | head -10
           fi
 
       - name: Upload APK
