@@ -13,7 +13,7 @@ fullscreen = 0
 
 android.api = 34
 android.minapi = 21
-android.ndk = r25c
+android.ndk = 25c
 android.archs = arm64-v8a
 android.permissions = ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, ACCESS_BACKGROUND_LOCATION, CAMERA, INTERNET
 android.gradle_api_version = 34
