@@ -57,25 +57,46 @@ jobs:
           echo "=== Done ==="
           ls -d ~/.buildozer/android/platform/*/
 
+      - name: Check buildozer
+        shell: bash
+        run: |
+          export PATH=$HOME/.local/bin:$PATH
+          echo "=== python3 ==="
+          which python3
+          python3 --version
+          echo "=== pip3 list ==="
+          pip3 list --user 2>/dev/null | grep -i buildozer || echo "NO BUILDozER IN USER PIP"
+          python3 -c "import buildozer; print('buildozer:', buildozer.__file__)" 2>&1 || echo "BUILDozER IMPORT FAILED"
+          echo "=== buildozer --version ==="
+          python3 -m buildozer --version 2>&1 || echo "BUILDozER MODULE FAILED"
+
       - name: Build APK
         shell: bash
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
         run: |
+          set +e
           export PATH=$HOME/.local/bin:$PATH
           python3 -m buildozer android debug 2>&1 | tee buildozer_output.log
+          exit ${PIPESTATUS[0]}
 
       - name: Show buildozer output
         if: always()
-        shell: bash
+        shell: bash {0}
         run: |
-          if [ -f buildozer_output.log ]; then
+          log=buildozer_output.log
+          if [ ! -f "$log" ]; then
+            echo "=== NO LOG FILE ==="
+            ls -la . 2>/dev/null
+            find . -name "*.log" -o -name "buildozer*" 2>/dev/null | head -10
+          else
+            echo "=== Log size: $(wc -c < "$log") bytes ==="
             echo "=== Last 30 lines ==="
-            tail -30 buildozer_output.log
-            echo "=== Lines with error/404 ==="
-            grep -inP "404|error|failed|HTTPError|not found" buildozer_output.log | head -20
+            tail -30 "$log"
+            echo "=== Errors ==="
+            grep -iP "404|error|failed|HTTPError|not found" "$log" 2>/dev/null | head -20 || echo "(no error matches)"
             echo "=== Download URLs ==="
-            grep -inP "download|http.*\.zip|http.*\.tar" buildozer_output.log | head -10
+            grep -iP "download|http.*\.(zip|tar\.gz)" "$log" 2>/dev/null | head -10 || echo "(no URL matches)"
           fi
 
       - name: Upload APK
