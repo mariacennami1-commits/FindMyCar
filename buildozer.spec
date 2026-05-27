@@ -5,7 +5,7 @@ package.domain = com.findmycar
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 version = 1.0.0
-requirements = python3,kivy,kivymd,plyer,pyjnius
+requirements = python3,kivy,kivymd,plyer,pyjnius,pillow
 orientation = portrait
 osx.python_version = 3
 osx.kivy_version = 2.3.0
@@ -22,8 +22,6 @@ android.add_background_location = True
 
 presplash.filename = assets/logo.png
 presplash.bg_color = 0d1117
-presplash.loading_color = 00e5ff
-presplash.scale = 0.6
 icon = assets/icon.png
 
 [buildozer]

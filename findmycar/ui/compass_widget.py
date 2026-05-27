@@ -5,7 +5,11 @@ from kivy.graphics import Color, Rotate, PushMatrix, PopMatrix, Line, Rectangle
 from kivy.uix.widget import Widget
 from kivy.core.image import Image as CoreImage
 import io
-from PIL import Image, ImageDraw
+try:
+    from PIL import Image, ImageDraw
+    _HAS_PIL = True
+except ImportError:
+    _HAS_PIL = False
 
 
 class CompassWidget(Widget):
@@ -20,6 +24,8 @@ class CompassWidget(Widget):
         Clock.schedule_once(self._create_compass, 0)
 
     def _create_compass(self, dt):
+        if not _HAS_PIL:
+            return
         size = self.width or 200
         img = Image.new("RGBA", (int(size), int(size)), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)

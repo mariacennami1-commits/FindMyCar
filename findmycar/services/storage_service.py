@@ -3,7 +3,10 @@ import os
 from datetime import datetime
 from kivy.logger import Logger
 from kivy.utils import platform
-from plyer import storagepath
+try:
+    from plyer import storagepath
+except Exception:
+    storagepath = None
 
 
 class ParkingRecord:
@@ -49,13 +52,19 @@ class StorageService:
         self._load()
 
     def _get_storage_path(self):
-        if platform == "android":
-            base = storagepath.get_external_storage_dir()
-        elif platform == "ios":
-            base = storagepath.get_documents_dir()
+        if platform == "android" and storagepath is not None:
+            try:
+                base = storagepath.get_external_storage_dir()
+            except Exception:
+                base = os.path.join(os.environ.get("EXTERNAL_STORAGE", "/sdcard"), ".findmycar")
+        elif platform == "ios" and storagepath is not None:
+            try:
+                base = storagepath.get_documents_dir()
+            except Exception:
+                base = os.path.join(os.path.expanduser("~"), "Documents", ".findmycar")
         else:
             base = os.path.join(os.path.expanduser("~"), ".findmycar")
-            os.makedirs(base, exist_ok=True)
+        os.makedirs(base, exist_ok=True)
         return os.path.join(base, "parking_data.json")
 
     def _load(self):

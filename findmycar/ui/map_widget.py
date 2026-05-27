@@ -1,16 +1,11 @@
 import os
 import math
-import struct
-import io
 from kivy.logger import Logger
 from kivy.clock import Clock
 from kivy.properties import NumericProperty, ObjectProperty, ListProperty
 from kivy.graphics import Color, Rectangle, Line, Ellipse
 from kivy.uix.widget import Widget
 from kivy.core.image import Image as CoreImage
-from kivy.loader import Loader
-from kivy.cache import Cache
-from plyer import gps
 import concurrent.futures
 import urllib.request
 
