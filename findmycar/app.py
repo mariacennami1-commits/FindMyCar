@@ -14,7 +14,7 @@ from kivymd.app import MDApp
 from kivymd.uix.navigationdrawer import MDNavigationDrawer
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.list import MDList
-from kivymd.uix.separator import MDSeparator
+from kivy.uix.widget import Widget
 import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -119,7 +119,7 @@ class FindMyCarApp(MDApp):
         header.add_widget(icon_w)
         header.add_widget(title_lbl)
         header.add_widget(version_lbl)
-        separator = MDSeparator()
+        separator = Widget(size_hint_y=None, height="1dp")
         scroll = MDScrollView()
         self.drawer_list = MDList(spacing="4dp")
         items = [
