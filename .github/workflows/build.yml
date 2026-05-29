@@ -43,7 +43,7 @@ jobs:
         shell: bash
         run: |
           export PATH=$HOME/.local/bin:$PATH
-          python3 -m buildozer android debug 2>&1 | tee buildozer_output.log
+          python3 -u -m buildozer -v android debug 2>&1 | tee buildozer_output.log
       - name: Show buildozer output
         if: always()
         shell: bash
@@ -52,16 +52,25 @@ jobs:
           if [ ! -f "$log" ]; then
             echo "NO LOG FILE"
           else
+            echo "=== File info ==="
+            wc -c "$log"
             wc -l "$log"
-            echo "=== Last 50 lines ==="
-            tail -50 "$log"
+            echo "=== Full log ==="
+            cat "$log"
             echo ""
             echo "=== Errors ==="
-            grep -in "404\|error\|failed\|not found\|traceback" "$log" 2>/dev/null | head -30 || echo "(none)"
+            grep -in "404\|error\|failed\|not found\|traceback\|exception" "$log" 2>/dev/null | head -30 || echo "(none)"
             echo ""
             echo "=== Warnings ==="
             grep -in "warning\|cannot\|missing" "$log" 2>/dev/null | head -20 || echo "(none)"
           fi
+      - name: Upload buildozer log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Buildozer-log
+          path: buildozer_output.log
+          if-no-files-found: warn
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
@@ -69,3 +78,4 @@ jobs:
           path: |
             bin/*.apk
             *.apk
+          if-no-files-found: ignore

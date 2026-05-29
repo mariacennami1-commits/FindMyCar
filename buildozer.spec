@@ -19,9 +19,10 @@ android.permissions = ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, ACCESS_BACKG
 android.gradle_api_version = 34
 android.wakelock = True
 android.add_background_location = True
+android.accept_sdk_license = True
 
 presplash.filename = assets/logo.png
-presplash.bg_color = 0d1117
+android.presplash_color = #0d1117
 icon = assets/icon.png
 
 [buildozer]
