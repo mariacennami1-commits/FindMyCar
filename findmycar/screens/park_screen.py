@@ -1,4 +1,6 @@
 import os
+import shutil
+import uuid
 from kivy.clock import Clock
 from kivy.properties import StringProperty, NumericProperty
 from kivy.uix.screenmanager import Screen
@@ -191,13 +193,7 @@ class ParkScreen(Screen):
     def take_photo(self):
         try:
             from plyer import camera
-            import uuid
-            photo_file = f"car_{uuid.uuid4().hex[:8]}.jpg"
-            photo_path = os.path.join(
-                os.path.dirname(self.storage_service._file_path),
-                photo_file,
-            )
-            camera.take_picture(photo_path, self._on_photo_captured)
+            camera.take_picture(callback=self._on_photo_captured)
         except Exception as e:
             Logger.warning(f"ParkScreen: Camera not available - {e}")
             self.photo_text = "Fotocamera non disponibile"

@@ -119,6 +119,8 @@ class HomeScreen(Screen):
 
         latest = self.storage_service.get_latest()
         if latest:
+            if not self.gps_service.has_fix():
+                map_widget.set_center(latest.latitude, latest.longitude)
             map_widget.set_parked_position(latest.latitude, latest.longitude)
 
     def _get_app(self):
