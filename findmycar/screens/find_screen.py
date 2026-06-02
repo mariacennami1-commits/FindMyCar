@@ -295,10 +295,10 @@ class FindScreen(Screen):
         self.manager.current = "home"
 
     def _show_error(self, msg):
-        from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
+        from kivymd.uix.snackbar import MDSnackbar
         from kivy.metrics import dp
         MDSnackbar(
-            MDSnackbarText(text=msg),
+            text=msg,
             y=dp(24),
             pos_hint={"center_x": 0.5},
             size_hint_x=0.5,
@@ -306,10 +306,10 @@ class FindScreen(Screen):
         ).open()
 
     def _show_info(self, msg):
-        from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
+        from kivymd.uix.snackbar import MDSnackbar
         from kivy.metrics import dp
         MDSnackbar(
-            MDSnackbarText(text=msg),
+            text=msg,
             y=dp(24),
             pos_hint={"center_x": 0.5},
             size_hint_x=0.5,

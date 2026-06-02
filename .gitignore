@@ -1,7 +1,8 @@
-__pycache__/
 *.pyc
 *.pyo
-buildozer.spec.bak
+*.zip
 .DS_Store
+__pycache__/
 apk.zip
 bin/
+buildozer.spec.bak

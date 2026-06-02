@@ -199,7 +199,7 @@ class ParkScreen(Screen):
                     self.photo_text = "Permesso fotocamera negato"
                     return
             from plyer import camera
-            camera.take_picture(callback=self._on_photo_captured)
+            camera.take_picture(None, self._on_photo_captured)
         except Exception as e:
             Logger.warning(f"ParkScreen: Camera error - {e}")
             self.photo_text = "Fotocamera non disponibile"
@@ -210,10 +210,10 @@ class ParkScreen(Screen):
             self.photo_text = "Foto aggiunta ✓"
 
     def _show_error(self, msg):
-        from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
+        from kivymd.uix.snackbar import MDSnackbar
         from kivy.metrics import dp
         MDSnackbar(
-            MDSnackbarText(text=msg),
+            text=msg,
             y=dp(24),
             pos_hint={"center_x": 0.5},
             size_hint_x=0.5,
@@ -221,10 +221,10 @@ class ParkScreen(Screen):
         ).open()
 
     def _show_success(self, msg):
-        from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
+        from kivymd.uix.snackbar import MDSnackbar
         from kivy.metrics import dp
         MDSnackbar(
-            MDSnackbarText(text=msg),
+            text=msg,
             y=dp(24),
             pos_hint={"center_x": 0.5},
             size_hint_x=0.5,
