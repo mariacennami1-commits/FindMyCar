@@ -68,8 +68,9 @@ class ParkScreen(Screen):
             ContentValues = autoclass("android.content.ContentValues")
 
             self._photo_file = "car_" + uuid.uuid4().hex[:8] + ".jpg"
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
             self._photo_dest = os.path.join(
-                os.path.dirname(self.storage_service._file_path),
+                PythonActivity.mActivity.getFilesDir().getAbsolutePath(),
                 self._photo_file,
             )
 
