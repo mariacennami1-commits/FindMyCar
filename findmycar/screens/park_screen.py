@@ -1,229 +1,93 @@
 import os
-import shutil
 import uuid
-from kivy.clock import Clock
-from kivy.properties import StringProperty, NumericProperty
 from kivy.uix.screenmanager import Screen
-from kivy.lang import Builder
+from kivy.clock import Clock, mainthread
+from kivy.properties import StringProperty, ObjectProperty, BooleanProperty
+from kivy.utils import platform
 from kivy.logger import Logger
-from datetime import datetime
 
-Builder.load_string("""
-<ParkScreen>:
-    MDBoxLayout:
-        orientation: "vertical"
-        md_bg_color: 0.05, 0.07, 0.09, 1
-        spacing: "24dp"
-        padding: ["24dp", "48dp", "24dp", "24dp"]
-
-        MDTopAppBar:
-            title: "Parcheggia"
-            md_bg_color: 0.05, 0.07, 0.09, 1
-            specific_text_color: 1, 1, 1, 1
-            left_action_items: [["arrow-left", lambda x: root.go_back(), "Indietro"]]
-
-        MDRelativeLayout:
-            size_hint_y: 0.6
-
-            MDCard:
-                orientation: "vertical"
-                size_hint: 0.9, 0.8
-                pos_hint: {"center_x": 0.5, "center_y": 0.5}
-                md_bg_color: 0.09, 0.1, 0.13, 1
-                radius: [24, 24, 24, 24]
-                padding: "24dp"
-                spacing: "16dp"
-                elevation: 4
-
-                MDIcon:
-                    icon: "map-marker-radius"
-                    font_size: "64sp"
-                    theme_text_color: "Custom"
-                    text_color: 0.0, 0.898, 1.0, 1
-                    halign: "center"
-                    size_hint_y: 0.3
-
-                MDLabel:
-                    text: "Salva posizione"
-                    font_size: "22sp"
-                    theme_text_color: "Custom"
-                    text_color: 1, 1, 1, 1
-                    halign: "center"
-                    bold: True
-
-                MDLabel:
-                    text: root.address_text
-                    font_size: "13sp"
-                    theme_text_color: "Custom"
-                    text_color: 0.6, 0.62, 0.65, 1
-                    halign: "center"
-                    shorten: True
-                    shorten_from: "right"
-
-                MDLabel:
-                    text: root.coords_text
-                    font_size: "11sp"
-                    theme_text_color: "Custom"
-                    text_color: 0.4, 0.42, 0.45, 1
-                    halign: "center"
-
-                Widget:
-                    size_hint_y: None
-                    height: "1dp"
-                    canvas:
-                        Color:
-                            rgba: 0.2, 0.22, 0.25, 1
-                        Rectangle:
-                            pos: self.pos
-                            size: self.size
-
-                MDTextField:
-                    id: notes_input
-                    hint_text: "Aggiungi note (piano, zona...)"
-                    multiline: False
-                    md_bg_color: 0.12, 0.14, 0.17, 1
-                    mode: "fill"
-                    size_hint_x: 1
-                    font_size: "14sp"
-                    hint_text_color_normal: 0.4, 0.42, 0.45, 1
-                    text_color_normal: 1, 1, 1, 1
-                    line_color_normal: 0, 0, 0, 0
-                    line_color_focus: 0.0, 0.898, 1.0, 1
-
-            MDRoundFlatIconButton:
-                id: park_btn
-                text: "Parcheggia Qui"
-                icon: "check-circle"
-                font_size: "18sp"
-                size_hint_x: 0.9
-                pos_hint: {"center_x": 0.5}
-                theme_text_color: "Custom"
-                text_color: 1, 1, 1, 1
-                md_bg_color: 0.0, 0.6, 0.8, 1
-                line_color: 0, 0, 0, 0
-                radius: [28, 28, 28, 28]
-                on_release: root.save_parking()
-
-        MDBoxLayout:
-            orientation: "horizontal"
-            size_hint_y: 0.1
-            pos_hint: {"center_x": 0.5}
-
-            MDIconButton:
-                icon: "camera-outline"
-                theme_text_color: "Custom"
-                text_color: 0.6, 0.62, 0.65, 1
-                on_release: root.take_photo()
-
-            MDLabel:
-                text: root.photo_text
-                font_size: "12sp"
-                theme_text_color: "Custom"
-                text_color: 0.4, 0.42, 0.45, 1
-                valign: "middle"
-""")
+if platform == "android":
+    from android import activity, mActivity
+    from android.permissions import request_permissions, Permission
 
 
 class ParkScreen(Screen):
-    address_text = StringProperty("Rilevamento posizione...")
-    coords_text = StringProperty("")
-    photo_text = StringProperty("Aggiungi foto")
+    storage_service = ObjectProperty(None, allownone=True)
+    mapview = ObjectProperty(None, allownone=True)
+    locate_button = ObjectProperty(None, allownone=True)
+    bottom_nav = ObjectProperty(None, allownone=True)
+    address = StringProperty("")
+    photo_text = StringProperty("")
+    _photo_path = None
+    _gps_icon_source = StringProperty("")
+    _capture_uri = None
+    _photo_dest = None
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.gps_service = None
-        self.storage_service = None
-        self._photo_path = ""
+    def on_pre_enter(self):
+        self.storage_service = self.manager.storage_service if hasattr(self.manager, "storage_service") else None
 
     def on_enter(self):
-        Clock.schedule_once(self._setup, 0.1)
+        self._update_address()
+        self._update_gps_icon()
 
-    def _setup(self, dt):
-        app = self._get_app()
-        if not app:
-            return
-        self.gps_service = app.gps_service
-        self.storage_service = app.storage_service
-        self.gps_service.add_listener(self._on_gps_update)
+    def _update_address(self):
+        if self.storage_service and self.storage_service.last_parking:
+            self.address = self.storage_service.last_parking.get("address", "Posizione salvata")
+        else:
+            self.address = "Nessun parcheggio salvato"
 
-        if self.gps_service.has_fix():
-            pos = self.gps_service.get_position()
-            if pos:
-                self._update_coords(pos[0], pos[1])
-
-    def _get_app(self):
-        try:
-            from kivy.app import App
-            return App.get_running_app()
-        except:
-            return None
-
-    def _on_gps_update(self, gps_svc):
-        pos = gps_svc.get_position()
-        if pos:
-            self._update_coords(pos[0], pos[1])
-
-    def _update_coords(self, lat, lon):
-        self.coords_text = f"{lat:.6f}, {lon:.6f}"
-        self.address_text = f"Lat: {lat:.4f}° · Lon: {lon:.4f}°"
-
-    def save_parking(self):
-        if not self.gps_service or not self.gps_service.has_fix():
-            self._show_error("GPS non attivo")
-            return
-
-        pos = self.gps_service.get_position()
-        if not pos:
-            return
-
-        notes = self.ids.notes_input.text
-        record = self.storage_service.save_parking(
-            pos[0], pos[1],
-            address=self.address_text,
-            notes=notes,
-        )
-
-        if hasattr(record, "photo_path") and self._photo_path:
-            record.photo_path = self._photo_path
-            self.storage_service._save()
-
-        self._show_success("Posizione salvata!")
-        Clock.schedule_once(lambda dt: self._go_home(), 1.0)
+    def _update_gps_icon(self):
+        pass
 
     def take_photo(self):
-        try:
-            from android.permissions import request_permissions, Permission, check_permission
-            if check_permission("android.permission.CAMERA"):
-                self._open_camera_intent()
-                return
-            request_permissions(
-                [Permission.CAMERA],
-                callback=self._on_permission_callback,
-            )
-        except Exception as e:
-            Logger.warning(f"ParkScreen: Camera error - {e}")
-            self.photo_text = "Fotocamera non disponibile"
+        if platform != "android":
+            self.photo_text = "Solo Android"
+            return
+        Logger.info("ParkScreen: Requesting camera permission")
+        request_permissions(
+            [Permission.CAMERA],
+            callback=self._on_permission_callback
+        )
 
     def _on_permission_callback(self, permissions, grant_results):
-        if grant_results and all(grant_results):
-            self._open_camera_intent()
+        Logger.info("ParkScreen: Permission result - " + str(permissions) + " -> " + str(grant_results))
+        if len(grant_results) > 0 and all(r == 0 for r in grant_results):
+            Logger.info("ParkScreen: Permission granted, opening camera")
+            Clock.schedule_once(lambda dt: self._open_camera_intent(), 0.1)
         else:
+            Logger.warning("ParkScreen: Camera permission denied")
             self.photo_text = "Permesso fotocamera negato"
 
     def _open_camera_intent(self):
         try:
-            from jnius import autoclass
+            from jnius import autoclass, cast
             from android import activity, mActivity
 
-            Intent = autoclass('android.content.Intent')
-            MediaStore = autoclass('android.provider.MediaStore')
+            Intent = autoclass("android.content.Intent")
+            MediaStore = autoclass("android.provider.MediaStore")
+            ContentValues = autoclass("android.content.ContentValues")
+
+            self._photo_file = "car_" + uuid.uuid4().hex[:8] + ".jpg"
+            self._photo_dest = os.path.join(
+                os.path.dirname(self.storage_service._file_path),
+                self._photo_file,
+            )
+
+            values = ContentValues()
+            values.put(MediaStore.Images.Media.TITLE, self._photo_file)
+            values.put(MediaStore.Images.Media.DISPLAY_NAME, self._photo_file)
+            values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            resolver = mActivity.getContentResolver()
+            uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+            self._capture_uri = uri
 
             intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            intent.putExtra(MediaStore.EXTRA_OUTPUT, uri)
             activity.unbind(on_activity_result=self._on_camera_result)
             activity.bind(on_activity_result=self._on_camera_result)
             mActivity.startActivityForResult(intent, 0x1234)
         except Exception as e:
-            Logger.warning(f"ParkScreen: Camera launch error - {e}")
+            Logger.warning("ParkScreen: Camera launch error - " + str(e))
             self.photo_text = "Fotocamera non disponibile"
 
     def _on_camera_result(self, requestCode, resultCode, intent):
@@ -235,58 +99,48 @@ class ParkScreen(Screen):
         except:
             pass
 
-        if resultCode == -1 and intent is not None:
+        if resultCode == -1 and self._capture_uri is not None:
             try:
                 from jnius import autoclass
-                import os, uuid
 
-                Bitmap = autoclass('android.graphics.Bitmap')
-                FileOutputStream = autoclass('java.io.FileOutputStream')
+                PythonActivity = autoclass("org.kivy.android.PythonActivity")
+                mActivity = PythonActivity.mActivity
+                resolver = mActivity.getContentResolver()
+                Bitmap = autoclass("android.graphics.Bitmap")
+                BitmapFactory = autoclass("android.graphics.BitmapFactory")
+                FileOutputStream = autoclass("java.io.FileOutputStream")
 
-                extras = intent.getExtras()
-                if extras is not None and extras.containsKey("data"):
-                    bitmap = extras.get("data")
+                istream = resolver.openInputStream(self._capture_uri)
+                if istream is not None:
+                    bitmap = BitmapFactory.decodeStream(istream)
+                    istream.close()
                     if bitmap is not None:
-                        photo_file = f"car_{uuid.uuid4().hex[:8]}.jpg"
-                        dest = os.path.join(
-                            os.path.dirname(self.storage_service._file_path),
-                            photo_file,
-                        )
-                        fos = FileOutputStream(dest)
+                        fos = FileOutputStream(self._photo_dest)
                         bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
                         fos.close()
-                        self._photo_path = dest
+                        self._photo_path = self._photo_dest
                         self.photo_text = "Foto aggiunta \u2713"
                         return
             except Exception as e:
-                Logger.error(f"ParkScreen: Save error - {e}")
+                Logger.error("ParkScreen: Save error - " + str(e))
 
         self.photo_text = "Foto non acquisita"
 
-    def _show_error(self, msg):
-        from kivymd.uix.snackbar import MDSnackbar
-        from kivy.metrics import dp
-        MDSnackbar(
-            text=msg,
-            y=dp(24),
-            pos_hint={"center_x": 0.5},
-            size_hint_x=0.5,
-            background_color=(0.8, 0.1, 0.1, 1),
-        ).open()
+    def on_photo_pressed(self, *args):
+        if self._photo_path and os.path.exists(self._photo_path):
+            from kivy.uix.image import Image
+            from kivy.uix.popup import Popup
+            from kivy.uix.boxlayout import BoxLayout
+            from kivy.uix.button import Button
 
-    def _show_success(self, msg):
-        from kivymd.uix.snackbar import MDSnackbar
-        from kivy.metrics import dp
-        MDSnackbar(
-            text=msg,
-            y=dp(24),
-            pos_hint={"center_x": 0.5},
-            size_hint_x=0.5,
-            background_color=(0.0, 0.6, 0.3, 1),
-        ).open()
+            layout = BoxLayout(orientation="vertical")
+            img = Image(source=self._photo_path, allow_stretch=True, keep_ratio=True)
+            close_btn = Button(text="Chiudi", size_hint_y=0.15)
+            layout.add_widget(img)
+            layout.add_widget(close_btn)
 
-    def _go_home(self):
-        self.manager.current = "home"
-
-    def go_back(self):
-        self.manager.current = "home"
+            popup = Popup(title="Foto parcheggio", content=layout, size_hint=(0.9, 0.9), auto_dismiss=True)
+            close_btn.bind(on_release=popup.dismiss)
+            popup.open()
+        else:
+            self.take_photo()
