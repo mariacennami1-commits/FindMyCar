@@ -193,12 +193,25 @@ class ParkScreen(Screen):
     def take_photo(self):
         try:
             from android.permissions import request_permissions, Permission, check_permission
-            if not check_permission("android.permission.CAMERA"):
-                results = request_permissions([Permission.CAMERA])
-                if not results or not all(results):
-                    self.photo_text = "Permesso fotocamera negato"
-                    return
+            if check_permission("android.permission.CAMERA"):
+                self._open_camera_intent()
+                return
+            request_permissions(
+                [Permission.CAMERA],
+                callback=self._on_permission_callback,
+            )
+        except Exception as e:
+            Logger.warning(f"ParkScreen: Camera error - {e}")
+            self.photo_text = "Fotocamera non disponibile"
 
+    def _on_permission_callback(self, permissions, grant_results):
+        if grant_results and all(grant_results):
+            self._open_camera_intent()
+        else:
+            self.photo_text = "Permesso fotocamera negato"
+
+    def _open_camera_intent(self):
+        try:
             from jnius import autoclass
             from android import activity, mActivity
 
@@ -210,7 +223,7 @@ class ParkScreen(Screen):
             activity.bind(on_activity_result=self._on_camera_result)
             mActivity.startActivityForResult(intent, 0x1234)
         except Exception as e:
-            Logger.warning(f"ParkScreen: Camera error - {e}")
+            Logger.warning(f"ParkScreen: Camera launch error - {e}")
             self.photo_text = "Fotocamera non disponibile"
 
     def _on_camera_result(self, requestCode, resultCode, intent):
