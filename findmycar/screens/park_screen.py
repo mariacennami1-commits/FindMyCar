@@ -198,16 +198,57 @@ class ParkScreen(Screen):
                 if not results or not all(results):
                     self.photo_text = "Permesso fotocamera negato"
                     return
-            from plyer import camera
-            camera.take_picture(None, self._on_photo_captured)
+
+            from jnius import autoclass
+            from android import activity, mActivity
+
+            Intent = autoclass('android.content.Intent')
+            MediaStore = autoclass('android.provider.MediaStore')
+
+            intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            activity.unbind(on_activity_result=self._on_camera_result)
+            activity.bind(on_activity_result=self._on_camera_result)
+            mActivity.startActivityForResult(intent, 0x1234)
         except Exception as e:
             Logger.warning(f"ParkScreen: Camera error - {e}")
             self.photo_text = "Fotocamera non disponibile"
 
-    def _on_photo_captured(self, path):
-        if path:
-            self._photo_path = path
-            self.photo_text = "Foto aggiunta ✓"
+    def _on_camera_result(self, requestCode, resultCode, intent):
+        if requestCode != 0x1234:
+            return
+        try:
+            from android import activity
+            activity.unbind(on_activity_result=self._on_camera_result)
+        except:
+            pass
+
+        if resultCode == -1 and intent is not None:
+            try:
+                from jnius import autoclass
+                import os, uuid
+
+                Bitmap = autoclass('android.graphics.Bitmap')
+                FileOutputStream = autoclass('java.io.FileOutputStream')
+
+                extras = intent.getExtras()
+                if extras is not None and extras.containsKey("data"):
+                    bitmap = extras.get("data")
+                    if bitmap is not None:
+                        photo_file = f"car_{uuid.uuid4().hex[:8]}.jpg"
+                        dest = os.path.join(
+                            os.path.dirname(self.storage_service._file_path),
+                            photo_file,
+                        )
+                        fos = FileOutputStream(dest)
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
+                        fos.close()
+                        self._photo_path = dest
+                        self.photo_text = "Foto aggiunta \u2713"
+                        return
+            except Exception as e:
+                Logger.error(f"ParkScreen: Save error - {e}")
+
+        self.photo_text = "Foto non acquisita"
 
     def _show_error(self, msg):
         from kivymd.uix.snackbar import MDSnackbar
