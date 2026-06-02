@@ -192,10 +192,16 @@ class ParkScreen(Screen):
 
     def take_photo(self):
         try:
+            from android.permissions import request_permissions, Permission, check_permission
+            if not check_permission("android.permission.CAMERA"):
+                results = request_permissions([Permission.CAMERA])
+                if not results or not all(results):
+                    self.photo_text = "Permesso fotocamera negato"
+                    return
             from plyer import camera
             camera.take_picture(callback=self._on_photo_captured)
         except Exception as e:
-            Logger.warning(f"ParkScreen: Camera not available - {e}")
+            Logger.warning(f"ParkScreen: Camera error - {e}")
             self.photo_text = "Fotocamera non disponibile"
 
     def _on_photo_captured(self, path):

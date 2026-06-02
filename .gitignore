@@ -3,3 +3,5 @@ __pycache__/
 *.pyo
 buildozer.spec.bak
 .DS_Store
+apk.zip
+bin/

@@ -20,6 +20,7 @@ android.gradle_api_version = 34
 android.wakelock = True
 android.add_background_location = True
 android.accept_sdk_license = True
+android.gradle_dependencies = androidx.core:core:1.12.0
 
 presplash.filename = assets/logo.png
 android.presplash_color = #0d1117
