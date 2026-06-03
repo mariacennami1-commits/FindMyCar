@@ -70,7 +70,8 @@ class ParkScreen(Screen):
                 PythonActivity.mActivity.getFilesDir().getAbsolutePath(),
                 self._photo_file,
             )
-            self._capture_time_ms = int(Clock.get_time() * 1000)
+            from jnius import autoclass as _ajc
+            self._capture_time_ms = _ajc("java.lang.System").currentTimeMillis()
 
             intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
             activity.unbind(on_activity_result=self._on_camera_result)
