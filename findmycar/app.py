@@ -67,9 +67,8 @@ class FindMyCarApp(MDApp):
     def build(self):
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Indigo"
-        self.theme_cls.accent_palette = "Cyan"
+        self.theme_cls.accent_palette = "Indigo"
         self.theme_cls.material_style = "M3"
-        self.theme_cls.primary_color = (0.678, 0.776, 1.0, 1)
         Window.clearcolor = (0.075, 0.075, 0.082, 1)
         from kivymd.uix.navigationdrawer import MDNavigationLayout
         root = MDNavigationLayout()
