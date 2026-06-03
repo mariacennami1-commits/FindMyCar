@@ -1,129 +1,149 @@
 from kivy.clock import Clock
-from kivy.properties import StringProperty, BooleanProperty
+from kivy.properties import StringProperty, BooleanProperty, ListProperty
 from kivy.uix.screenmanager import Screen
+from kivy.uix.boxlayout import BoxLayout
 from kivy.lang import Builder
 from kivy.logger import Logger
 from datetime import datetime
 
+
+class GlassCard(BoxLayout):
+    radius = ListProperty([16, 16, 16, 16])
+
+
 Builder.load_string("""
+<GlassCard>:
+    canvas.before:
+        Color:
+            rgba: 0.11, 0.11, 0.118, 0.8
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: root.radius
+        Color:
+            rgba: 1, 1, 1, 0.05
+        Line:
+            rounded_rectangle: [self.x, self.y, self.width, self.height, root.radius[0] if root.radius else 16]
+            width: 0.5
+
+
 <HomeScreen>:
+    canvas.before:
+        Color:
+            rgba: 0.075, 0.075, 0.082, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
     BoxLayout:
         orientation: "vertical"
-        canvas.before:
-            Color:
-                rgba: 0.075, 0.075, 0.082, 1
-            Rectangle:
-                pos: self.pos
-                size: self.size
 
         MDTopAppBar:
             title: "Trova la mia auto"
             md_bg_color: 0.075, 0.075, 0.082, 1
-            specific_text_color: 1, 1, 1, 1
+            specific_text_color: 0.678, 0.776, 1.0, 1
             elevation: 0
             left_action_items: [["arrow-left", lambda x: root.open_nav_drawer()]]
             right_action_items: [["account-circle", lambda x: None]]
 
         RelativeLayout:
 
-            MDCard:
+            GlassCard:
                 id: gps_badge
                 size_hint: None, None
                 height: "32dp"
-                width: "200dp"
-                pos_hint: {"center_x": 0.5, "top": 0.93}
-                md_bg_color: 0.09, 0.1, 0.13, 0.95
-                radius: [16, 16, 16, 16]
+                width: "220dp"
+                pos_hint: {"center_x": 0.5, "top": 0.95}
                 padding: "14dp", "6dp"
                 spacing: "6dp"
 
-                MDIcon:
-                    id: gps_dot
-                    icon: "circle"
-                    font_size: "8sp"
-                    theme_text_color: "Custom"
-                    text_color: 0.133, 0.773, 0.369, 1
+                Widget:
+                    size_hint: None, None
+                    size: "8dp", "8dp"
+                    pos_hint: {"center_y": 0.5}
+                    canvas:
+                        Color:
+                            rgba: 0.325, 0.882, 0.435, 1
+                        Ellipse:
+                            pos: self.pos
+                            size: self.size
 
                 MDLabel:
                     id: gps_label
                     text: "Precisione: 5 metri"
                     font_size: "11sp"
                     theme_text_color: "Custom"
-                    text_color: 0.133, 0.773, 0.369, 1
+                    text_color: 0.325, 0.882, 0.435, 1
                     halign: "left"
                     valign: "middle"
 
-            Widget:
-                pos_hint: {"center_x": 0.5, "center_y": 0.50}
-                size_hint: None, None
-                size: "300dp", "300dp"
-                canvas:
-                    Color:
-                        rgba: 0, 0.48, 1, 0.13
-                    Ellipse:
-                        pos: self.pos
-                        size: self.size
-
-            MDBoxLayout:
-                id: save_area
+            BoxLayout:
                 orientation: "vertical"
                 pos_hint: {"center_x": 0.5, "center_y": 0.52}
                 size_hint: None, None
-                size: "220dp", "220dp"
-                spacing: "8dp"
-                padding: "30dp"
+                size: "200dp", "220dp"
+                spacing: "16dp"
+                padding: "20dp"
 
-                canvas.before:
-                    Color:
-                        rgba: 0, 0.48, 1, 1
-                    Ellipse:
-                        pos: self.pos
-                        size: self.size
-                    Color:
-                        rgba: 0, 0.48, 1, 0.2
-                    Ellipse:
-                        pos: [self.x - 8, self.y - 8]
-                        size: [self.width + 16, self.height + 16]
+                MDBoxLayout:
+                    id: save_area
+                    size_hint: None, None
+                    size: "192dp", "192dp"
+                    pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                    orientation: "vertical"
+                    spacing: "8dp"
+                    padding: "30dp"
 
-                MDIcon:
-                    icon: "map-marker-radius"
-                    font_size: "64sp"
-                    theme_text_color: "Custom"
-                    text_color: 1, 1, 1, 1
-                    halign: "center"
-                    valign: "middle"
+                    canvas.before:
+                        Color:
+                            rgba: 0.678, 0.776, 1.0, 0.15
+                        Ellipse:
+                            pos: [self.x - 10, self.y - 10]
+                            size: [self.width + 20, self.height + 20]
+                        Color:
+                            rgba: 0.678, 0.776, 1.0, 1
+                        Ellipse:
+                            pos: self.pos
+                            size: self.size
+
+                    MDIcon:
+                        id: save_icon
+                        icon: "map-marker-radius"
+                        font_size: "64sp"
+                        theme_text_color: "Custom"
+                        text_color: 0, 0.18, 0.41, 1
+                        halign: "center"
+                        valign: "middle"
+
+                    MDLabel:
+                        id: save_label
+                        text: "SALVA POSIZIONE"
+                        font_size: "11sp"
+                        bold: True
+                        theme_text_color: "Custom"
+                        text_color: 0, 0.18, 0.41, 1
+                        halign: "center"
+                        valign: "middle"
+                        letter_spacing: 2
 
                 MDLabel:
-                    text: "Salva Posizione"
-                    font_size: "15sp"
-                    bold: True
+                    text: "Tocca il pulsante per memorizzare dove hai parcheggiato."
+                    font_size: "13sp"
                     theme_text_color: "Custom"
-                    text_color: 1, 1, 1, 1
+                    text_color: 0.757, 0.776, 0.843, 1
                     halign: "center"
-                    valign: "middle"
+                    size_hint_x: 0.8
+                    text_size: self.width, None
 
-            MDLabel:
-                text: "Tocca il pulsante per memorizzare dove hai parcheggiato."
-                font_size: "13sp"
-                theme_text_color: "Custom"
-                text_color: 0.4, 0.42, 0.45, 1
-                halign: "center"
-                pos_hint: {"center_x": 0.5, "y": 0.26}
-                size_hint_x: 0.7
-                text_size: self.width, None
-
-            MDCard:
+            GlassCard:
                 id: parking_card
                 orientation: "vertical"
                 size_hint_x: 0.9
                 size_hint_y: None
-                height: "210dp"
+                height: "220dp"
                 pos_hint: {"center_x": 0.5, "y": 0.03}
-                md_bg_color: 0.106, 0.106, 0.114, 1
-                radius: [24, 24, 24, 24]
                 padding: "20dp"
-                spacing: "16dp"
-                elevation: 0
+                spacing: "12dp"
 
                 MDBoxLayout:
                     orientation: "horizontal"
@@ -131,35 +151,34 @@ Builder.load_string("""
                     height: "48dp"
                     spacing: "12dp"
 
-                    MDCard:
+                    MDBoxLayout:
                         size_hint: None, None
                         size: "44dp", "44dp"
-                        md_bg_color: 0.12, 0.12, 0.15, 1
+                        md_bg_color: 0.208, 0.208, 0.216, 1
                         radius: [12, 12, 12, 12]
-                        padding: 0
                         MDIcon:
-                            icon: "store-outline"
+                            icon: "car"
                             font_size: "24sp"
                             theme_text_color: "Custom"
-                            text_color: 0.6, 0.6, 0.65, 1
+                            text_color: 0.678, 0.776, 1.0, 1
                             halign: "center"
-                            valign: "middle"
+                            valign: "center"
 
                     MDBoxLayout:
                         orientation: "vertical"
                         spacing: "2dp"
                         MDLabel:
                             text: "Ultimo parcheggio"
-                            font_size: "16sp"
+                            font_size: "17sp"
                             bold: True
                             theme_text_color: "Custom"
-                            text_color: 1, 1, 1, 1
+                            text_color: 0.894, 0.886, 0.894, 1
                         MDLabel:
                             id: time_label
                             text: ""
-                            font_size: "12sp"
+                            font_size: "13sp"
                             theme_text_color: "Custom"
-                            text_color: 0.4, 0.42, 0.45, 1
+                            text_color: 0.757, 0.776, 0.843, 1
 
                 MDBoxLayout:
                     orientation: "horizontal"
@@ -171,94 +190,54 @@ Builder.load_string("""
                         icon: "map-marker"
                         font_size: "18sp"
                         theme_text_color: "Custom"
-                        text_color: 0, 0.48, 1, 1
+                        text_color: 0.678, 0.776, 1.0, 1
 
                     MDLabel:
                         id: address_label
                         text: "Nessun parcheggio salvato"
-                        font_size: "14sp"
+                        font_size: "15sp"
                         theme_text_color: "Custom"
-                        text_color: 0.8, 0.8, 0.85, 1
+                        text_color: 0.894, 0.886, 0.894, 1
 
-                MDRoundFlatIconButton:
+                MDFlatButton:
                     id: navigate_btn
                     text: "PORTAMI QUI"
-                    icon: "navigation-outline"
-                    font_size: "14sp"
+                    font_size: "13sp"
                     bold: True
                     size_hint_y: None
                     height: "48dp"
                     theme_text_color: "Custom"
-                    text_color: 1, 1, 1, 1
-                    md_bg_color: 0.12, 0.12, 0.15, 1
-                    line_color: 0.12, 0.12, 0.15, 1
+                    text_color: 0.678, 0.776, 1.0, 1
+                    md_bg_color: 0.208, 0.208, 0.216, 1
                     radius: [16, 16, 16, 16]
                     on_release: root.navigate_to_car()
 
-        MDBoxLayout:
+        MDBottomNavigation:
+            id: bottom_nav
             size_hint_y: None
-            height: "80dp"
-            md_bg_color: 0.075, 0.075, 0.082, 1
-            padding: "0dp", "8dp", "0dp", "24dp"
-            spacing: 0
-            canvas.before:
-                Color:
-                    rgba: 1, 1, 1, 0.05
-                Line:
-                    points: [self.x, self.y + self.height, self.right, self.y + self.height]
-                    width: 0.5
+            height: "72dp"
+            md_bg_color: 0.122, 0.122, 0.129, 0.8
+            panel_color: 0.122, 0.122, 0.129, 0.8
+            selected_color: 0.678, 0.776, 1.0, 1
+            unselected_color: 0.5, 0.5, 0.55, 1
 
-            MDBoxLayout:
-                id: tab_home
-                orientation: "vertical"
-                spacing: "4dp"
-                MDIcon:
-                    icon: "home"
-                    font_size: "24sp"
-                    theme_text_color: "Custom"
-                    text_color: 0, 0.48, 1, 1
-                    halign: "center"
-                MDLabel:
-                    text: "Home"
-                    font_size: "11sp"
-                    bold: True
-                    theme_text_color: "Custom"
-                    text_color: 0, 0.48, 1, 1
-                    halign: "center"
+            MDBottomNavigationItem:
+                name: "home_tab"
+                text: "Home"
+                icon: "home"
+                on_tab_press: root.go_home()
 
-            MDBoxLayout:
-                id: tab_history
-                orientation: "vertical"
-                spacing: "4dp"
-                MDIcon:
-                    icon: "history"
-                    font_size: "24sp"
-                    theme_text_color: "Custom"
-                    text_color: 0.4, 0.4, 0.45, 1
-                    halign: "center"
-                MDLabel:
-                    text: "History"
-                    font_size: "11sp"
-                    theme_text_color: "Custom"
-                    text_color: 0.4, 0.4, 0.45, 1
-                    halign: "center"
+            MDBottomNavigationItem:
+                name: "history_tab"
+                text: "History"
+                icon: "history"
+                on_tab_press: root.go_to_history()
 
-            MDBoxLayout:
-                id: tab_settings
-                orientation: "vertical"
-                spacing: "4dp"
-                MDIcon:
-                    icon: "cog"
-                    font_size: "24sp"
-                    theme_text_color: "Custom"
-                    text_color: 0.4, 0.4, 0.45, 1
-                    halign: "center"
-                MDLabel:
-                    text: "Settings"
-                    font_size: "11sp"
-                    theme_text_color: "Custom"
-                    text_color: 0.4, 0.4, 0.45, 1
-                    halign: "center"
+            MDBottomNavigationItem:
+                name: "settings_tab"
+                text: "Settings"
+                icon: "cog"
+                on_tab_press: root.go_to_settings()
 """)
 
 
@@ -380,30 +359,46 @@ class HomeScreen(Screen):
         except (AttributeError, KeyError):
             pass
 
-        try:
-            if self.ids.tab_history.collide_point(*touch.pos):
-                self.go_to_history()
-                return True
-        except (AttributeError, KeyError):
-            pass
-
-        try:
-            if self.ids.tab_settings.collide_point(*touch.pos):
-                self.go_to_settings()
-                return True
-        except (AttributeError, KeyError):
-            pass
-
         return super().on_touch_down(touch)
 
     def save_position(self):
-        self.manager.current = "park"
+        if not self.gps_service or not self.gps_service.has_fix():
+            self._show_toast("GPS non disponibile")
+            return
+
+        pos = self.gps_service.get_position()
+        if not pos:
+            return
+
+        lat, lon = pos
+        address = ""
+        if self.offline_localizer:
+            pass
+
+        record = self.storage_service.save_parking(lat, lon, address)
+        Logger.info(f"HomeScreen: Saved parking #{record.id} at {lat:.4f}, {lon:.4f}")
+
+        self.ids.save_icon.icon = "check-circle"
+        self.ids.save_label.text = "SALVATO!"
+
+        Clock.schedule_once(lambda dt: self._after_save(record), 1.5)
+
+    def _after_save(self, record):
+        self.ids.save_icon.icon = "map-marker-radius"
+        self.ids.save_label.text = "SALVA POSIZIONE"
+
+        details = self.manager.get_screen("details")
+        details.load_record(record)
+        self.manager.current = "details"
 
     def navigate_to_car(self):
         if self._has_parks:
             self.manager.current = "find"
         else:
             self._show_toast("Nessun parcheggio salvato")
+
+    def go_home(self):
+        pass
 
     def go_to_history(self):
         self.manager.current = "history"

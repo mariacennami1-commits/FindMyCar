@@ -9,75 +9,95 @@ from ..ui.compass_widget import CompassWidget
 
 Builder.load_string("""
 <FindScreen>:
-    MDBoxLayout:
+    canvas.before:
+        Color:
+            rgba: 0.075, 0.075, 0.082, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    BoxLayout:
         orientation: "vertical"
-        md_bg_color: 0.05, 0.07, 0.09, 1
 
         MDTopAppBar:
-            title: "Trova Auto"
-            md_bg_color: 0.05, 0.07, 0.09, 1
-            specific_text_color: 1, 1, 1, 1
-            left_action_items: [["arrow-left", lambda x: root.go_back(), "Indietro"]]
+            title: "Trova la mia auto"
+            md_bg_color: 0.075, 0.075, 0.082, 1
+            specific_text_color: 0.678, 0.776, 1.0, 1
+            elevation: 0
+            left_action_items: [["arrow-left", lambda x: root.go_back()]]
             right_action_items: [["refresh", lambda x: root.refresh_data(), "Aggiorna"]]
 
-        MDRelativeLayout:
+        RelativeLayout:
             size_hint_y: 0.55
 
-            CompassWidget:
-                id: compass
+            BoxLayout:
+                orientation: "vertical"
                 pos_hint: {"center_x": 0.5, "center_y": 0.5}
-                size_hint: 0.7, 0.7
+                size_hint: 0.8, 0.8
 
-            MDLabel:
-                text: root.direction_label
-                font_size: "14sp"
-                theme_text_color: "Custom"
-                text_color: 0.0, 0.898, 1.0, 1
-                halign: "center"
-                pos_hint: {"center_x": 0.5, "y": 0.05}
+                CompassWidget:
+                    id: compass
+                    pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                    size_hint: 0.7, 0.7
 
-        Widget:
-            size_hint_y: None
-            height: "1dp"
-            canvas:
-                Color:
-                    rgba: 0.15, 0.17, 0.2, 1
-                Rectangle:
-                    pos: self.pos
-                    size: self.size
+                MDLabel:
+                    text: root.direction_label
+                    font_size: "14sp"
+                    theme_text_color: "Custom"
+                    text_color: 0.678, 0.776, 1.0, 1
+                    halign: "center"
+                    pos_hint: {"center_x": 0.5, "y": 0.05}
 
-        MDBoxLayout:
+        BoxLayout:
             orientation: "vertical"
             size_hint_y: 0.45
-            padding: ["24dp", "16dp", "24dp", "16dp"]
+            padding: ["20dp", "16dp", "20dp", "16dp"]
             spacing: "12dp"
 
-            MDBoxLayout:
+            MDLabel:
+                id: address_label
+                text: root.address_text
+                font_size: "17sp"
+                bold: True
+                theme_text_color: "Custom"
+                text_color: 0.894, 0.886, 0.894, 1
+
+            MDLabel:
+                text: root.car_position_text
+                font_size: "13sp"
+                theme_text_color: "Custom"
+                text_color: 0.757, 0.776, 0.843, 1
+
+            BoxLayout:
                 orientation: "horizontal"
-                size_hint_y: 0.3
+                size_hint_y: None
+                height: "80dp"
                 spacing: "12dp"
 
-                MDCard:
+                BoxLayout:
                     orientation: "vertical"
-                    size_hint_x: 0.5
-                    md_bg_color: 0.09, 0.1, 0.13, 1
-                    radius: [16, 16, 16, 16]
                     padding: "12dp"
                     spacing: "4dp"
+                    canvas.before:
+                        Color:
+                            rgba: 0.11, 0.11, 0.118, 0.8
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [12, 12, 12, 12]
 
                     MDIcon:
                         icon: "map-marker-distance"
-                        font_size: "24sp"
+                        font_size: "20sp"
                         theme_text_color: "Custom"
-                        text_color: 0.0, 0.898, 1.0, 1
+                        text_color: 0.678, 0.776, 1.0, 1
                         halign: "center"
-                        size_hint_y: 0.4
 
                     MDLabel:
                         text: root.distance_text
-                        font_size: "28sp"
+                        font_size: "22sp"
                         theme_text_color: "Custom"
-                        text_color: 1, 1, 1, 1
+                        text_color: 0.894, 0.886, 0.894, 1
                         halign: "center"
                         bold: True
 
@@ -88,27 +108,30 @@ Builder.load_string("""
                         text_color: 0.5, 0.52, 0.55, 1
                         halign: "center"
 
-                MDCard:
+                BoxLayout:
                     orientation: "vertical"
-                    size_hint_x: 0.5
-                    md_bg_color: 0.09, 0.1, 0.13, 1
-                    radius: [16, 16, 16, 16]
                     padding: "12dp"
                     spacing: "4dp"
+                    canvas.before:
+                        Color:
+                            rgba: 0.11, 0.11, 0.118, 0.8
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [12, 12, 12, 12]
 
                     MDIcon:
                         icon: "walk"
-                        font_size: "24sp"
+                        font_size: "20sp"
                         theme_text_color: "Custom"
-                        text_color: 0.0, 0.898, 1.0, 1
+                        text_color: 0.678, 0.776, 1.0, 1
                         halign: "center"
-                        size_hint_y: 0.4
 
                     MDLabel:
                         text: root.time_text
-                        font_size: "28sp"
+                        font_size: "22sp"
                         theme_text_color: "Custom"
-                        text_color: 1, 1, 1, 1
+                        text_color: 0.894, 0.886, 0.894, 1
                         halign: "center"
                         bold: True
 
@@ -119,37 +142,16 @@ Builder.load_string("""
                         text_color: 0.5, 0.52, 0.55, 1
                         halign: "center"
 
-            MDBoxLayout:
-                orientation: "horizontal"
-                size_hint_y: 0.2
-                spacing: "8dp"
-
-                MDChip:
-                    text: root.status_text
-                    icon: "satellite-variant"
-                    md_bg_color: 0.09, 0.1, 0.13, 1
-                    theme_text_color: "Custom"
-                    text_color: 0.0, 0.898, 1.0, 1
-                    pos_hint: {"center_y": 0.5}
-
-                MDLabel:
-                    text: root.car_position_text
-                    font_size: "12sp"
-                    theme_text_color: "Custom"
-                    text_color: 0.4, 0.42, 0.45, 1
-                    valign: "middle"
-
-            MDRoundFlatIconButton:
-                id: navigate_btn
-                text: "Avvia Navigazione"
+            MDFlatButton:
+                text: "AVVIA NAVIGAZIONE"
                 icon: "navigation"
                 font_size: "16sp"
-                size_hint_x: 1
-                size_hint_y: 0.25
+                bold: True
+                size_hint_y: None
+                height: "56dp"
                 theme_text_color: "Custom"
-                text_color: 1, 1, 1, 1
-                md_bg_color: 0.0, 0.6, 0.8, 1
-                line_color: 0, 0, 0, 0
+                text_color: 0.894, 0.886, 0.894, 1
+                md_bg_color: 0.294, 0.557, 1.0, 1
                 radius: [28, 28, 28, 28]
                 on_release: root.start_navigation()
 """)
@@ -161,6 +163,7 @@ class FindScreen(Screen):
     direction_label = StringProperty("---")
     status_text = StringProperty("GPS")
     car_position_text = StringProperty("Auto non salvata")
+    address_text = StringProperty("")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -187,10 +190,12 @@ class FindScreen(Screen):
             self._parked_lat = latest.latitude
             self._parked_lon = latest.longitude
             self._no_parking = False
+            self.address_text = latest.address or f"{latest.latitude:.4f}, {latest.longitude:.4f}"
             self.car_position_text = f"Auto: {latest.latitude:.4f}, {latest.longitude:.4f}"
         else:
             self._no_parking = True
             self.car_position_text = "Nessuna auto parcheggiata salvata"
+            self.address_text = ""
 
         self._gps_listener_active = True
         self.gps_service.add_listener(self._on_gps_update)
@@ -253,13 +258,9 @@ class FindScreen(Screen):
             offline_pos, mode = self.offline_localizer.get_position() if self.offline_localizer else (None, None)
             if offline_pos:
                 self._on_position(offline_pos[0], offline_pos[1])
-                self.status_text = self.offline_localizer.get_status_text() if self.offline_localizer else "Offline"
             return
 
         self._on_position(pos[0], pos[1])
-
-        if self.offline_localizer:
-            self.status_text = self.offline_localizer.get_status_text()
 
     def refresh_data(self):
         self.on_enter()

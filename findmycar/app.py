@@ -25,6 +25,7 @@ from .screens.home_screen import HomeScreen
 from .screens.park_screen import ParkScreen
 from .screens.find_screen import FindScreen
 from .screens.history_screen import HistoryScreen
+from .screens.details_screen import DetailsScreen
 from .ui.compass_widget import CompassWidget
 from .ui.map_widget import OfflineMapWidget
 Builder.load_string("""
@@ -68,7 +69,8 @@ class FindMyCarApp(MDApp):
         self.theme_cls.primary_palette = "Indigo"
         self.theme_cls.accent_palette = "Cyan"
         self.theme_cls.material_style = "M3"
-        Window.clearcolor = (0.05, 0.07, 0.09, 1)
+        self.theme_cls.primary_color = (0.678, 0.776, 1.0, 1)
+        Window.clearcolor = (0.075, 0.075, 0.082, 1)
         from kivymd.uix.navigationdrawer import MDNavigationLayout
         root = MDNavigationLayout()
         self.screen_manager = ScreenManager(
@@ -78,6 +80,7 @@ class FindMyCarApp(MDApp):
         self.screen_manager.add_widget(ParkScreen(name="park"))
         self.screen_manager.add_widget(FindScreen(name="find"))
         self.screen_manager.add_widget(HistoryScreen(name="history"))
+        self.screen_manager.add_widget(DetailsScreen(name="details"))
         nav = MDNavigationDrawer(
             md_bg_color=(0.07, 0.08, 0.11, 1),
             radius=(0, 16, 16, 0),
@@ -127,6 +130,7 @@ class FindMyCarApp(MDApp):
             ("parking", "Parcheggia", "park"),
             ("navigation", "Trova Auto", "find"),
             ("history", "Cronologia", "history"),
+            ("info", "Dettagli", "details"),
         ]
         for icon_name, text, screen_name in items:
             item = DrawerItem(

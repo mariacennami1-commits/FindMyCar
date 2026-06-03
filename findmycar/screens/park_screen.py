@@ -4,38 +4,103 @@ from kivy.uix.screenmanager import Screen
 from kivy.clock import Clock, mainthread
 from kivy.properties import StringProperty, ObjectProperty, BooleanProperty
 from kivy.utils import platform
+from kivy.lang import Builder
 from kivy.logger import Logger
 
 if platform == "android":
     from android import activity, mActivity
     from android.permissions import request_permissions, Permission
 
+Builder.load_string("""
+<ParkScreen>:
+    canvas.before:
+        Color:
+            rgba: 0.075, 0.075, 0.082, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    BoxLayout:
+        orientation: "vertical"
+
+        MDTopAppBar:
+            title: "Scatta Foto"
+            md_bg_color: 0.075, 0.075, 0.082, 1
+            specific_text_color: 0.678, 0.776, 1.0, 1
+            elevation: 0
+            left_action_items: [["arrow-left", lambda x: root.go_back()]]
+
+        BoxLayout:
+            orientation: "vertical"
+            padding: "40dp"
+            spacing: "24dp"
+
+            BoxLayout:
+                orientation: "vertical"
+                spacing: "16dp"
+                pos_hint: {"center_y": 0.5}
+
+                MDIcon:
+                    icon: "camera"
+                    font_size: "80sp"
+                    theme_text_color: "Custom"
+                    text_color: 0.678, 0.776, 1.0, 1
+                    halign: "center"
+
+                MDLabel:
+                    text: "Inquadra l'area del parcheggio"
+                    font_size: "17sp"
+                    theme_text_color: "Custom"
+                    text_color: 0.894, 0.886, 0.894, 1
+                    halign: "center"
+
+                MDLabel:
+                    id: status_label
+                    text: root.photo_text
+                    font_size: "14sp"
+                    theme_text_color: "Custom"
+                    text_color: 0.757, 0.776, 0.843, 1
+                    halign: "center"
+
+            MDFlatButton:
+                id: camera_btn
+                text: "APRI FOTOCAMERA"
+                icon: "camera"
+                font_size: "16sp"
+                bold: True
+                theme_text_color: "Custom"
+                text_color: 0.894, 0.886, 0.894, 1
+                md_bg_color: 0.294, 0.557, 1.0, 1
+                radius: [28, 28, 28, 28]
+                size_hint_y: None
+                height: "56dp"
+                on_release: root.take_photo()
+
+            MDFlatButton:
+                id: confirm_btn
+                text: "CONFERMA"
+                icon: "check-circle"
+                font_size: "16sp"
+                bold: True
+                theme_text_color: "Custom"
+                text_color: 0, 0.18, 0.41, 1
+                md_bg_color: 0.325, 0.882, 0.435, 1
+                radius: [28, 28, 28, 28]
+                size_hint_y: None
+                height: "56dp"
+                on_release: root.confirm_photo()
+""")
+
 
 class ParkScreen(Screen):
-    storage_service = ObjectProperty(None, allownone=True)
-    mapview = ObjectProperty(None, allownone=True)
-    locate_button = ObjectProperty(None, allownone=True)
-    bottom_nav = ObjectProperty(None, allownone=True)
-    address = StringProperty("")
     photo_text = StringProperty("")
     _photo_path = None
-    _gps_icon_source = StringProperty("")
+    _capture_time_ms = 0
+    _callback = None
+    _photo_dest = None
 
-    def on_pre_enter(self):
-        self.storage_service = self.manager.storage_service if hasattr(self.manager, "storage_service") else None
-
-    def on_enter(self):
-        self._update_address()
-        self._update_gps_icon()
-
-    def _update_address(self):
-        if self.storage_service and self.storage_service.last_parking:
-            self.address = self.storage_service.last_parking.get("address", "Posizione salvata")
-        else:
-            self.address = "Nessun parcheggio salvato"
-
-    def _update_gps_icon(self):
-        pass
+    def set_callback(self, callback):
+        self._callback = callback
 
     def take_photo(self):
         if platform != "android":
@@ -196,21 +261,18 @@ class ParkScreen(Screen):
             Logger.error("ParkScreen: _copy_from_cursor error - " + str(e))
         return False
 
-    def on_photo_pressed(self, *args):
-        if self._photo_path and os.path.exists(self._photo_path):
-            from kivy.uix.image import Image
-            from kivy.uix.popup import Popup
-            from kivy.uix.boxlayout import BoxLayout
-            from kivy.uix.button import Button
-
-            layout = BoxLayout(orientation="vertical")
-            img = Image(source=self._photo_path, allow_stretch=True, keep_ratio=True)
-            close_btn = Button(text="Chiudi", size_hint_y=0.15)
-            layout.add_widget(img)
-            layout.add_widget(close_btn)
-
-            popup = Popup(title="Foto parcheggio", content=layout, size_hint=(0.9, 0.9), auto_dismiss=True)
-            close_btn.bind(on_release=popup.dismiss)
-            popup.open()
+    def confirm_photo(self):
+        if self._callback and self._photo_path:
+            cb = self._callback
+            self._callback = None
+            cb(self._photo_path)
         else:
-            self.take_photo()
+            self.go_back()
+
+    def go_back(self):
+        if self._callback:
+            cb = self._callback
+            self._callback = None
+            cb(None)
+        else:
+            self.manager.current = "home"
