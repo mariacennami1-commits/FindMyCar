@@ -339,7 +339,6 @@ class HomeScreen(Screen):
             return ts.strftime("%d/%m/%Y, %H:%M")
         except:
             return ts_str
->>>>>>> Stashed changes
 
     def _get_app(self):
         try:
