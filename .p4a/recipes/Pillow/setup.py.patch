@@ -1,0 +1,50 @@
+diff -uNr Pillow-12.2.0/setup.py Pillow-12.2.0.mod/setup.py
+--- Pillow-12.2.0/setup.py	2026-04-01 14:52:00.000000000 +0530
++++ Pillow-12.2.0.mod/setup.py	2026-06-03 20:00:00.000000000 +0530
+@@ -117,6 +117,7 @@
+ 
+ 
+ def _find_library_dirs_ldconfig() -> list[str]:
++    return []
+     # Based on ctypes.util from Python 2
+ 
+     ldconfig = "ldconfig" if shutil.which("ldconfig") else "/sbin/ldconfig"
+@@ -340,12 +341,10 @@
+ 
+             if root is None and root_name in os.environ:
+                 root_prefix = os.environ[root_name]
+-                root = (
+-                    os.path.join(root_prefix, "lib"),
+-                    os.path.join(root_prefix, "include"),
+-                )
++                root = tuple(os.environ[root_name].split(":"))
+ 
+             if root is None and pkg_config:
++                continue
+                 if isinstance(lib_name, str):
+                     _dbg("Looking for `%s` using pkg-config.", lib_name)
+                     root = pkg_config(lib_name)
+@@ -389,13 +388,11 @@
+                 for d in os.environ[k].split(os.path.pathsep):
+                     _add_directory(library_dirs, d)
+ 
+-        _add_directory(library_dirs, os.path.join(sys.prefix, "lib"))
+-        _add_directory(include_dirs, os.path.join(sys.prefix, "include"))
+ 
+         #
+         # add platform directories
+ 
+-        if self.disable_platform_guessing:
++        if True:
+             pass
+ 
+         elif sys.platform == "cygwin":
+@@ -468,7 +465,7 @@
+         # FIXME: check /opt/stuff directories here?
+ 
+         # standard locations
+-        if not self.disable_platform_guessing:
++        if False:
+             _add_directory(library_dirs, "/usr/local/lib")
+             _add_directory(include_dirs, "/usr/local/include")
+ 
