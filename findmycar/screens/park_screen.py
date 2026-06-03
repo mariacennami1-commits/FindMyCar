@@ -137,40 +137,64 @@ class ParkScreen(Screen):
                             return
 
                 Logger.info("ParkScreen: Scanning MediaStore for recent photo")
+                time_window_s = 120
+                selection = MediaStore.Images.Media.DATE_ADDED + " > " + str(int(self._capture_time_ms / 1000) - time_window_s)
                 cursor = resolver.query(
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                     None,
-                    MediaStore.Images.Media.DATE_ADDED + " > " + str(int(self._capture_time_ms / 1000) - 5),
+                    selection,
                     None,
                     MediaStore.Images.Media.DATE_ADDED + " DESC",
                 )
-                Logger.info("ParkScreen: Cursor=" + str(cursor))
+                Logger.info("ParkScreen: Cursor(window)=" + str(cursor))
+                found = False
                 if cursor is not None and cursor.moveToFirst():
-                    uri_str = cursor.getString(cursor.getColumnIndex("_data"))
-                    Logger.info("ParkScreen: Found gallery photo at " + str(uri_str))
-                    if uri_str:
-                        uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI.buildUpon().appendPath(
-                            str(cursor.getLong(cursor.getColumnIndex("_id")))
-                        ).build()
-                        istream = resolver.openInputStream(uri)
-                        if istream is not None:
-                            bitmap = BitmapFactory.decodeStream(istream)
-                            istream.close()
-                            if bitmap is not None:
-                                fos = FileOutputStream(self._photo_dest)
-                                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
-                                fos.close()
-                                self._photo_path = self._photo_dest
-                                self.photo_text = "Foto aggiunta ✓"
-                                Logger.info("ParkScreen: Photo saved from gallery scan")
-                                return
+                    found = self._copy_from_cursor(cursor, resolver, MediaStore, Bitmap, BitmapFactory, FileOutputStream)
                     cursor.close()
+                if not found:
+                    Logger.info("ParkScreen: Time-window query returned nothing, trying latest photo")
+                    cursor = resolver.query(
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        None,
+                        None,
+                        None,
+                        MediaStore.Images.Media.DATE_ADDED + " DESC",
+                    )
+                    if cursor is not None and cursor.moveToFirst():
+                        found = self._copy_from_cursor(cursor, resolver, MediaStore, Bitmap, BitmapFactory, FileOutputStream)
+                        cursor.close()
+                if found:
+                    return
             except Exception as e:
                 Logger.error("ParkScreen: Save error - " + str(e))
                 import traceback
                 Logger.error("ParkScreen: Traceback - " + str(traceback.format_exc()))
 
         self.photo_text = "Foto non acquisita"
+
+    def _copy_from_cursor(self, cursor, resolver, MediaStore, Bitmap, BitmapFactory, FileOutputStream):
+        try:
+            uri_str = cursor.getString(cursor.getColumnIndex("_data"))
+            photo_id = cursor.getLong(cursor.getColumnIndex("_id"))
+            Logger.info("ParkScreen: Found photo _id=" + str(photo_id) + " path=" + str(uri_str))
+            uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI.buildUpon().appendPath(
+                str(photo_id)
+            ).build()
+            istream = resolver.openInputStream(uri)
+            if istream is not None:
+                bitmap = BitmapFactory.decodeStream(istream)
+                istream.close()
+                if bitmap is not None:
+                    fos = FileOutputStream(self._photo_dest)
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
+                    fos.close()
+                    self._photo_path = self._photo_dest
+                    self.photo_text = "Foto aggiunta ✓"
+                    Logger.info("ParkScreen: Photo saved from gallery scan")
+                    return True
+        except Exception as e:
+            Logger.error("ParkScreen: _copy_from_cursor error - " + str(e))
+        return False
 
     def on_photo_pressed(self, *args):
         if self._photo_path and os.path.exists(self._photo_path):
