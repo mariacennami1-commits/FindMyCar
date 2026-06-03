@@ -96,7 +96,6 @@ class ParkScreen(Screen):
         if resultCode == -1:
             try:
                 from jnius import autoclass
-                import jnius
 
                 PythonActivity = autoclass("org.kivy.android.PythonActivity")
                 mActivity = PythonActivity.mActivity
@@ -105,7 +104,6 @@ class ParkScreen(Screen):
                 Bitmap = autoclass("android.graphics.Bitmap")
                 BitmapFactory = autoclass("android.graphics.BitmapFactory")
                 FileOutputStream = autoclass("java.io.FileOutputStream")
-                Long = autoclass("java.lang.Long")
 
                 extras = intent.getExtras() if intent is not None else None
                 Logger.info("ParkScreen: extras=" + str(extras))
@@ -118,7 +116,7 @@ class ParkScreen(Screen):
                         bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
                         fos.close()
                         self._photo_path = self._photo_dest
-                        self.photo_text = "✓"
+                        self.photo_text = "Foto aggiunta ✓"
                         Logger.info("ParkScreen: Photo saved from thumbnail extras")
                         return
 
@@ -134,7 +132,7 @@ class ParkScreen(Screen):
                             bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
                             fos.close()
                             self._photo_path = self._photo_dest
-                            self.photo_text = "✓"
+                            self.photo_text = "Foto aggiunta ✓"
                             Logger.info("ParkScreen: Photo saved from intent data URI")
                             return
 
@@ -142,9 +140,9 @@ class ParkScreen(Screen):
                 cursor = resolver.query(
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                     None,
-                    MediaStore.Images.Media.DATE_TAKEN + " > " + str(self._capture_time_ms),
+                    MediaStore.Images.Media.DATE_ADDED + " > " + str(int(self._capture_time_ms / 1000) - 5),
                     None,
-                    MediaStore.Images.Media.DATE_TAKEN + " DESC",
+                    MediaStore.Images.Media.DATE_ADDED + " DESC",
                 )
                 Logger.info("ParkScreen: Cursor=" + str(cursor))
                 if cursor is not None and cursor.moveToFirst():
@@ -163,7 +161,7 @@ class ParkScreen(Screen):
                                 bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
                                 fos.close()
                                 self._photo_path = self._photo_dest
-                                self.photo_text = "✓"
+                                self.photo_text = "Foto aggiunta ✓"
                                 Logger.info("ParkScreen: Photo saved from gallery scan")
                                 return
                     cursor.close()
