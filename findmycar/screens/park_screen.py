@@ -114,7 +114,7 @@ class ParkScreen(Screen):
 
     def _on_permission_callback(self, permissions, grant_results):
         Logger.info("ParkScreen: Permission result - " + str(permissions) + " -> " + str(grant_results))
-        if len(grant_results) > 0 and all(r == 0 for r in grant_results):
+        if len(grant_results) > 0 and all(r for r in grant_results):
             Logger.info("ParkScreen: Permission granted, opening camera")
             Clock.schedule_once(lambda dt: self._open_camera_intent(), 0.1)
         else:

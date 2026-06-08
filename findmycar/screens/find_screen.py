@@ -296,23 +296,9 @@ class FindScreen(Screen):
         self.manager.current = "home"
 
     def _show_error(self, msg):
-        from kivymd.uix.snackbar import MDSnackbar
-        from kivy.metrics import dp
-        MDSnackbar(
-            text=msg,
-            y=dp(24),
-            pos_hint={"center_x": 0.5},
-            size_hint_x=0.5,
-            background_color=(0.8, 0.1, 0.1, 1),
-        ).open()
+        from kivymd.uix.snackbar import Snackbar
+        Snackbar(text=msg, duration=3).open()
 
     def _show_info(self, msg):
-        from kivymd.uix.snackbar import MDSnackbar
-        from kivy.metrics import dp
-        MDSnackbar(
-            text=msg,
-            y=dp(24),
-            pos_hint={"center_x": 0.5},
-            size_hint_x=0.5,
-            background_color=(0.0, 0.3, 0.6, 1),
-        ).open()
+        from kivymd.uix.snackbar import Snackbar
+        Snackbar(text=msg, duration=3).open()
