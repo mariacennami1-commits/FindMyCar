@@ -46,190 +46,171 @@ Builder.load_string("""
             left_action_items: [["arrow-left", lambda x: root.open_nav_drawer()]]
             right_action_items: [["account-circle", lambda x: None]]
 
-        BoxLayout:
-            orientation: "vertical"
-            padding: 0
-            spacing: 0
+        FloatLayout:
+
+            GlassCard:
+                id: gps_badge
+                size_hint: None, None
+                height: "32dp"
+                width: "220dp"
+                pos_hint: {"center_x": 0.5, "top": 0.93}
+                padding: "14dp", "6dp"
+                spacing: "6dp"
+
+                Widget:
+                    size_hint: None, None
+                    size: "8dp", "8dp"
+                    pos_hint: {"center_y": 0.5}
+                    canvas:
+                        Color:
+                            rgba: 0.325, 0.882, 0.435, 1
+                        Ellipse:
+                            pos: self.pos
+                            size: self.size
+
+                MDLabel:
+                    id: gps_label
+                    text: "Precisione: 5 metri"
+                    font_size: "11sp"
+                    theme_text_color: "Custom"
+                    text_color: 0.325, 0.882, 0.435, 1
+                    halign: "left"
+                    valign: "middle"
 
             BoxLayout:
-                size_hint_y: 0.07
-                orientation: "horizontal"
-                padding: 0
-                spacing: 0
-                GlassCard:
-                    id: gps_badge
+                orientation: "vertical"
+                pos_hint: {"center_x": 0.5, "center_y": 0.62}
+                size_hint: None, None
+                width: "180dp"
+                height: "200dp"
+                spacing: "12dp"
+
+                MDBoxLayout:
+                    id: save_area
                     size_hint: None, None
-                    height: "28dp"
-                    width: "200dp"
+                    size: "160dp", "160dp"
                     pos_hint: {"center_x": 0.5, "center_y": 0.5}
-                    padding: "12dp", "4dp"
+                    orientation: "vertical"
                     spacing: "6dp"
+                    padding: "20dp"
 
-                    Widget:
-                        size_hint: None, None
-                        size: "8dp", "8dp"
-                        pos_hint: {"center_y": 0.5}
-                        canvas:
-                            Color:
-                                rgba: 0.325, 0.882, 0.435, 1
-                            Ellipse:
-                                pos: self.pos
-                                size: self.size
+                    canvas.before:
+                        Color:
+                            rgba: 0.678, 0.776, 1.0, 0.15
+                        Ellipse:
+                            pos: [self.x - 6, self.y - 6]
+                            size: [self.width + 12, self.height + 12]
+                        Color:
+                            rgba: 0.678, 0.776, 1.0, 1
+                        Ellipse:
+                            pos: self.pos
+                            size: self.size
 
-                    MDLabel:
-                        id: gps_label
-                        text: "Precisione: 5 metri"
-                        font_size: "11sp"
+                    MDIcon:
+                        id: save_icon
+                        icon: "map-marker-radius"
+                        font_size: "52sp"
                         theme_text_color: "Custom"
-                        text_color: 0.325, 0.882, 0.435, 1
-                        halign: "left"
+                        text_color: 0, 0.18, 0.41, 1
+                        halign: "center"
                         valign: "middle"
 
-            BoxLayout:
-                size_hint_y: 0.53
-                orientation: "vertical"
-                padding: 0
-                spacing: 0
-
-                BoxLayout:
-                    orientation: "vertical"
-                    size_hint: None, None
-                    size: "200dp", "220dp"
-                    pos_hint: {"center_x": 0.5, "center_y": 0.5}
-                    spacing: "16dp"
-                    padding: "20dp"
-
-                    MDBoxLayout:
-                        id: save_area
-                        size_hint: None, None
-                        size: "192dp", "192dp"
-                        pos_hint: {"center_x": 0.5, "center_y": 0.5}
-                        orientation: "vertical"
-                        spacing: "8dp"
-                        padding: "30dp"
-
-                        canvas.before:
-                            Color:
-                                rgba: 0.678, 0.776, 1.0, 0.15
-                            Ellipse:
-                                pos: [self.x - 10, self.y - 10]
-                                size: [self.width + 20, self.height + 20]
-                            Color:
-                                rgba: 0.678, 0.776, 1.0, 1
-                            Ellipse:
-                                pos: self.pos
-                                size: self.size
-
-                        MDIcon:
-                            id: save_icon
-                            icon: "map-marker-radius"
-                            font_size: "64sp"
-                            theme_text_color: "Custom"
-                            text_color: 0, 0.18, 0.41, 1
-                            halign: "center"
-                            valign: "middle"
-
-                        MDLabel:
-                            id: save_label
-                            text: "SALVA POSIZIONE"
-                            font_size: "11sp"
-                            bold: True
-                            theme_text_color: "Custom"
-                            text_color: 0, 0.18, 0.41, 1
-                            halign: "center"
-                            valign: "middle"
-                            letter_spacing: 2
-
                     MDLabel:
-                        text: "Tocca il pulsante per memorizzare dove hai parcheggiato."
-                        font_size: "13sp"
+                        id: save_label
+                        text: "SALVA POSIZIONE"
+                        font_size: "10sp"
+                        bold: True
                         theme_text_color: "Custom"
-                        text_color: 0.757, 0.776, 0.843, 1
+                        text_color: 0, 0.18, 0.41, 1
                         halign: "center"
-                        size_hint_x: 0.8
-                        text_size: self.width, None
+                        valign: "middle"
+                        letter_spacing: 2
 
-            BoxLayout:
-                size_hint_y: 0.4
-                orientation: "vertical"
-                padding: 0
-                spacing: 0
-
-                GlassCard:
-                    id: parking_card
-                    orientation: "vertical"
+                MDLabel:
+                    text: "Tocca il pulsante per memorizzare dove hai parcheggiato."
+                    font_size: "13sp"
+                    theme_text_color: "Custom"
+                    text_color: 0.757, 0.776, 0.843, 1
+                    halign: "center"
                     size_hint_x: 0.9
-                    size_hint_y: 0.85
-                    pos_hint: {"center_x": 0.5, "center_y": 0.5}
-                    padding: "20dp"
+                    text_size: self.width, None
+
+            GlassCard:
+                id: parking_card
+                orientation: "vertical"
+                size_hint_x: 0.9
+                size_hint_y: None
+                height: "180dp"
+                pos_hint: {"center_x": 0.5, "y": 0.1}
+                padding: "16dp"
+                spacing: "8dp"
+
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: None
+                    height: "44dp"
                     spacing: "12dp"
 
                     MDBoxLayout:
-                        orientation: "horizontal"
-                        size_hint_y: None
-                        height: "48dp"
-                        spacing: "12dp"
-
-                        MDBoxLayout:
-                            size_hint: None, None
-                            size: "44dp", "44dp"
-                            md_bg_color: 0.208, 0.208, 0.216, 1
-                            radius: [12, 12, 12, 12]
-                            MDIcon:
-                                icon: "car"
-                                font_size: "24sp"
-                                theme_text_color: "Custom"
-                                text_color: 0.678, 0.776, 1.0, 1
-                                halign: "center"
-                                valign: "center"
-
-                        MDBoxLayout:
-                            orientation: "vertical"
-                            spacing: "2dp"
-                            MDLabel:
-                                text: "Ultimo parcheggio"
-                                font_size: "17sp"
-                                bold: True
-                                theme_text_color: "Custom"
-                                text_color: 0.894, 0.886, 0.894, 1
-                            MDLabel:
-                                id: time_label
-                                text: ""
-                                font_size: "13sp"
-                                theme_text_color: "Custom"
-                                text_color: 0.757, 0.776, 0.843, 1
-
-                    MDBoxLayout:
-                        orientation: "horizontal"
-                        size_hint_y: None
-                        height: "24dp"
-                        spacing: "8dp"
-
+                        size_hint: None, None
+                        size: "40dp", "40dp"
+                        md_bg_color: 0.208, 0.208, 0.216, 1
+                        radius: [12, 12, 12, 12]
                         MDIcon:
-                            icon: "map-marker"
-                            font_size: "18sp"
+                            icon: "car"
+                            font_size: "22sp"
                             theme_text_color: "Custom"
                             text_color: 0.678, 0.776, 1.0, 1
+                            halign: "center"
+                            valign: "center"
 
+                    MDBoxLayout:
+                        orientation: "vertical"
+                        spacing: "2dp"
                         MDLabel:
-                            id: address_label
-                            text: "Nessun parcheggio salvato"
-                            font_size: "15sp"
+                            text: "Ultimo parcheggio"
+                            font_size: "16sp"
+                            bold: True
                             theme_text_color: "Custom"
                             text_color: 0.894, 0.886, 0.894, 1
+                        MDLabel:
+                            id: time_label
+                            text: ""
+                            font_size: "12sp"
+                            theme_text_color: "Custom"
+                            text_color: 0.757, 0.776, 0.843, 1
 
-                    MDFlatButton:
-                        id: navigate_btn
-                        text: "PORTAMI QUI"
-                        font_size: "13sp"
-                        bold: True
-                        size_hint_y: None
-                        height: "48dp"
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: None
+                    height: "22dp"
+                    spacing: "8dp"
+
+                    MDIcon:
+                        icon: "map-marker"
+                        font_size: "16sp"
                         theme_text_color: "Custom"
                         text_color: 0.678, 0.776, 1.0, 1
-                        md_bg_color: 0.208, 0.208, 0.216, 1
-                        radius: [16, 16, 16, 16]
-                        on_release: root.navigate_to_car()
+
+                    MDLabel:
+                        id: address_label
+                        text: "Nessun parcheggio salvato"
+                        font_size: "14sp"
+                        theme_text_color: "Custom"
+                        text_color: 0.894, 0.886, 0.894, 1
+
+                MDFlatButton:
+                    id: navigate_btn
+                    text: "PORTAMI QUI"
+                    font_size: "12sp"
+                    bold: True
+                    size_hint_y: None
+                    height: "44dp"
+                    theme_text_color: "Custom"
+                    text_color: 0.678, 0.776, 1.0, 1
+                    md_bg_color: 0.208, 0.208, 0.216, 1
+                    radius: [16, 16, 16, 16]
+                    on_release: root.navigate_to_car()
 
         MDBottomNavigation:
             id: bottom_nav
