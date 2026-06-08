@@ -8,7 +8,7 @@ from kivy.core.window import Window
 from kivy.logger import Logger
 from kivy.clock import Clock
 from kivy.lang import Builder
-from kivy.uix.screenmanager import ScreenManager, SlideTransition
+from kivy.uix.screenmanager import ScreenManager, NoTransition
 from kivy.properties import StringProperty
 from kivymd.app import MDApp
 from kivymd.uix.navigationdrawer import MDNavigationDrawer
@@ -70,7 +70,7 @@ class FindMyCarApp(MDApp):
         from kivymd.uix.navigationdrawer import MDNavigationLayout
         root = MDNavigationLayout()
         self.screen_manager = ScreenManager(
-            transition=SlideTransition(duration=0.2)
+            transition=NoTransition()
         )
         self.screen_manager.add_widget(HomeScreen(name="home"))
         self.screen_manager.add_widget(ParkScreen(name="park"))
