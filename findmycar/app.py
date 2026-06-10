@@ -1,3 +1,4 @@
+import traceback
 from kivy.config import Config
 Config.set("kivy", "window_icon", "")
 Config.set("graphics", "width", "400")
@@ -28,6 +29,9 @@ from .screens.history_screen import HistoryScreen
 from .screens.details_screen import DetailsScreen
 from .ui.compass_widget import CompassWidget
 from .ui.map_widget import OfflineMapWidget
+
+_APP_VERSION = "1.0.0"
+_CRASH_LOG = None
 Builder.load_string("""
 <DrawerItem>:
     spacing: "12dp"
@@ -56,7 +60,25 @@ class DrawerItem(MDBoxLayout):
                 self._on_press()
             return True
         return super().on_touch_down(touch)
+def _write_crash_log(msg):
+    global _CRASH_LOG
+    _CRASH_LOG = msg
+    try:
+        path = "/sdcard/findmycar_crash.txt"
+        with open(path, "w") as f:
+            f.write(msg + "\n")
+        Logger.error(f"Crash log written to {path}")
+    except:
+        try:
+            path = os.path.join(os.path.expanduser("~"), "findmycar_crash.txt")
+            with open(path, "w") as f:
+                f.write(msg + "\n")
+        except:
+            pass
+
 class FindMyCarApp(MDApp):
+    VERSION = _APP_VERSION
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.gps_service = GPSService()
@@ -64,7 +86,35 @@ class FindMyCarApp(MDApp):
         self.offline_localizer = OfflineLocalizer()
         self.nav_drawer = None
         self.screen_manager = None
+
     def build(self):
+        try:
+            return self._build()
+        except Exception as e:
+            tb = traceback.format_exc()
+            msg = f"FINDMYCAR CRASH:\nVersion: {self.VERSION}\nError: {e}\n\n{tb}"
+            Logger.error(msg)
+            _write_crash_log(msg)
+            from kivymd.uix.boxlayout import MDBoxLayout as BL
+            from kivymd.uix.label import MDLabel as ML
+            box = BL(orientation="vertical", padding="20dp", spacing="10dp")
+            box.add_widget(ML(
+                text=f"ERRORE AVVIO",
+                font_size="18sp",
+                theme_text_color="Custom",
+                text_color=(1, 0.3, 0.3, 1),
+                halign="center",
+            ))
+            box.add_widget(ML(
+                text=str(e)[:200],
+                font_size="14sp",
+                theme_text_color="Custom",
+                text_color=(1, 0.6, 0.6, 1),
+                halign="center",
+            ))
+            return box
+
+    def _build(self):
         self.theme_cls.theme_style = "Dark"
         Window.clearcolor = (0.075, 0.075, 0.082, 1)
         from kivymd.uix.navigationdrawer import MDNavigationLayout
@@ -110,7 +160,7 @@ class FindMyCarApp(MDApp):
             bold=True,
         )
         version_lbl = MDLabel(
-            text="v1.0.0",
+            text=f"v{self.VERSION}",
             font_size="12sp",
             theme_text_color="Custom",
             text_color=(0.4, 0.42, 0.45, 1),
@@ -127,13 +177,21 @@ class FindMyCarApp(MDApp):
             ("navigation", "Trova Auto", "find"),
             ("history", "Cronologia", "history"),
             ("info", "Dettagli", "details"),
+            ("update", "Verifica aggiornamenti", None),
         ]
         for icon_name, text, screen_name in items:
-            item = DrawerItem(
-                icon=icon_name,
-                text=text,
-                on_press=lambda s=screen_name: self._navigate_to(s),
-            )
+            if screen_name is None:
+                item = DrawerItem(
+                    icon=icon_name,
+                    text=text,
+                    on_press=lambda: self.check_for_updates(),
+                )
+            else:
+                item = DrawerItem(
+                    icon=icon_name,
+                    text=text,
+                    on_press=lambda s=screen_name: self._navigate_to(s),
+                )
             self.drawer_list.add_widget(item)
         scroll.add_widget(self.drawer_list)
         drawer_content.add_widget(header)
@@ -144,6 +202,7 @@ class FindMyCarApp(MDApp):
         root.add_widget(nav)
         self.nav_drawer = nav
         Clock.schedule_once(lambda dt: self._start_gps(), 0.5)
+        Clock.schedule_once(lambda dt: self._check_updates_background(), 3)
         return root
     def _start_gps(self):
         try:
@@ -159,6 +218,107 @@ class FindMyCarApp(MDApp):
             screen = self.screen_manager.get_screen(screen_name)
             if hasattr(screen, "on_enter"):
                 screen.dispatch("on_enter")
+    def check_for_updates(self):
+        self._do_update_check(show_ui=True)
+
+    def _check_updates_background(self):
+        self._do_update_check(show_ui=False)
+
+    def _do_update_check(self, show_ui=True):
+        try:
+            import json
+            import urllib.request
+            url = "https://api.github.com/repos/mariacennami1-commits/FindMyCar/releases/latest"
+            req = urllib.request.Request(url, headers={"User-Agent": "FindMyCar/1.0", "Accept": "application/vnd.github.v3+json"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode())
+
+            latest_tag = data.get("tag_name", "").lstrip("v")
+            current = self.VERSION
+            Logger.info(f"App: Update check - current={current} latest={latest_tag}")
+
+            if self._is_newer(latest_tag, current):
+                msg = f"Aggiornamento disponibile: v{latest_tag}"
+                Logger.info(f"App: {msg}")
+                self._show_update_dialog(data)
+            elif show_ui:
+                self._show_snackbar("Nessun aggiornamento disponibile")
+        except Exception as e:
+            if show_ui:
+                self._show_snackbar(f"Errore controllo: {e}")
+
+    def _is_newer(self, latest, current):
+        try:
+            lp = [int(x) for x in latest.split(".")]
+            cp = [int(x) for x in current.split(".")]
+            for i in range(max(len(lp), len(cp))):
+                lv = lp[i] if i < len(lp) else 0
+                cv = cp[i] if i < len(cp) else 0
+                if lv > cv:
+                    return True
+                elif lv < cv:
+                    return False
+            return False
+        except:
+            return latest != current
+
+    def _show_update_dialog(self, release_data):
+        try:
+            from kivymd.uix.dialog import MDDialog
+            from kivymd.uix.button import MDRaisedButton
+            assets = release_data.get("assets", [])
+            apk_url = None
+            for a in assets:
+                if a["name"].endswith(".apk"):
+                    apk_url = a["browser_download_url"]
+                    break
+            body = release_data.get("body", "")[:300]
+            dialog = MDDialog(
+                title=f"v{release_data.get('tag_name', '').lstrip('v')} disponibile",
+                text=f"{body}\n\nScaricare e installare?",
+                buttons=[
+                    MDRaisedButton(text="Annulla", on_release=lambda x: dialog.dismiss()),
+                    MDRaisedButton(
+                        text="Scarica",
+                        on_release=lambda x: (
+                            dialog.dismiss(),
+                            self._download_and_install(release_data["zipball_url"], apk_url),
+                        )
+                    ),
+                ],
+            )
+            dialog.open()
+        except Exception as e:
+            Logger.error(f"App: Update dialog error - {e}")
+
+    def _download_and_install(self, release_url, apk_url):
+        if not apk_url:
+            self._show_snackbar("APK non trovato nella release")
+            return
+        try:
+            from kivy.utils import platform
+            if platform != "android":
+                self._show_snackbar("Apri browser: " + apk_url)
+                return
+            from jnius import autoclass
+            Intent = autoclass("android.content.Intent")
+            Uri = autoclass("android.net.Uri")
+            intent = Intent(Intent.ACTION_VIEW)
+            intent.setData(Uri.parse(apk_url))
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            from android import mActivity
+            mActivity.startActivity(intent)
+        except Exception as e:
+            Logger.error(f"App: Open browser error - {e}")
+            self._show_snackbar(f"Apri manualmente: {apk_url}")
+
+    def _show_snackbar(self, msg):
+        try:
+            from kivymd.uix.snackbar import Snackbar
+            Snackbar(text=msg, duration=4).open()
+        except:
+            pass
+
     def on_stop(self):
         try:
             self.gps_service.stop()

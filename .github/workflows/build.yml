@@ -71,7 +71,7 @@ jobs:
           name: Buildozer-log
           path: buildozer_output.log
           if-no-files-found: warn
-      - name: Upload APK
+      - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
           name: FindMyCar-APK
@@ -79,3 +79,15 @@ jobs:
             bin/*.apk
             *.apk
           if-no-files-found: ignore
+      - name: Create GitHub Release
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TAG="v1.0.${{ github.run_number }}"
+          gh release create "$TAG" \
+            --repo "${{ github.repository }}" \
+            --title "Build #${{ github.run_number }}" \
+            --notes "APK automatico dal commit ${{ github.sha }}" \
+            bin/*.apk || echo "Release already exists, skipping"
