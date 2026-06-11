@@ -209,7 +209,25 @@ class FindMyCarApp(MDApp):
         Clock.schedule_once(lambda dt: self._start_gps(), 0.5)
         Clock.schedule_once(lambda dt: self._init_webview(), 0.8)
         Clock.schedule_once(lambda dt: self._check_updates_background(), 3)
+        Clock.schedule_once(lambda dt: self._refocus_activity(), 2)
         return root
+    def _refocus_activity(self):
+        try:
+            from kivy.utils import platform
+            if platform != "android":
+                return
+            from jnius import autoclass
+            PythonActivity = autoclass("org.kivy.android.PythonActivity")
+            activity = PythonActivity.mActivity
+            if activity.isFinishing() or not activity.hasWindowFocus():
+                Intent = autoclass("android.content.Intent")
+                intent = Intent(activity, activity.getClass())
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK)
+                activity.startActivity(intent)
+                Logger.info("App: Refocused activity")
+        except Exception as e:
+            Logger.warning("App: Refocus error - " + str(e))
+
     def _init_webview(self):
         try:
             self.webview_bridge.setup(callback=self._on_map_callback)

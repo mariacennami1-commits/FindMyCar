@@ -1,8 +1,6 @@
 from kivy.logger import Logger
 from kivy.utils import platform
 
-from .map_html import MAP_HTML
-
 
 class WebViewBridge:
     _instance = None
@@ -72,6 +70,7 @@ class WebViewBridge:
         self._webview.setWebViewClient(client)
 
         String = autoclass("java.lang.String")
+        from .map_html import MAP_HTML
         self._webview.loadDataWithBaseURL(
             None,
             String(MAP_HTML),
