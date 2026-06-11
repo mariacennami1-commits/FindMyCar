@@ -129,33 +129,40 @@ class ParkScreen(Screen):
             Intent = autoclass("android.content.Intent")
             MediaStore = autoclass("android.provider.MediaStore")
             ContentValues = autoclass("android.content.ContentValues")
-            Environment = autoclass("android.os.Environment")
-            Uri = autoclass("android.net.Uri")
 
             self._photo_file = "car_" + uuid.uuid4().hex[:8] + ".jpg"
             from jnius import autoclass as _ajc
             self._capture_time_ms = _ajc("java.lang.System").currentTimeMillis()
 
-            resolver = mActivity.getContentResolver()
-            values = ContentValues()
-            values.put(MediaStore.Images.Media.DISPLAY_NAME, self._photo_file)
-            values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
-            photo_uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-            if photo_uri is None:
-                raise Exception("resolver.insert returned null")
-            self._photo_uri_str = str(photo_uri.toString())
-            Logger.info("ParkScreen: Created MediaStore URI=" + self._photo_uri_str)
+            photo_uri = None
+            try:
+                resolver = mActivity.getContentResolver()
+                values = ContentValues()
+                values.put(MediaStore.Images.Media.DISPLAY_NAME, self._photo_file)
+                values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                photo_uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+            except Exception as e:
+                Logger.warning("ParkScreen: MediaStore insert failed: " + str(e))
+
+            self._photo_uri_str = str(photo_uri.toString()) if photo_uri is not None else None
+            if self._photo_uri_str:
+                Logger.info("ParkScreen: Created MediaStore URI=" + self._photo_uri_str)
+            else:
+                Logger.info("ParkScreen: No MediaStore URI, using fallback")
 
             intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-            intent.putExtra(MediaStore.EXTRA_OUTPUT, photo_uri)
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            if photo_uri is not None:
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, photo_uri)
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                Logger.info("ParkScreen: Intent with EXTRA_OUTPUT")
+            else:
+                Logger.info("ParkScreen: Intent without EXTRA_OUTPUT")
 
             activity.unbind(on_activity_result=self._on_camera_result)
             activity.bind(on_activity_result=self._on_camera_result)
             mActivity.startActivityForResult(intent, 0x1234)
-            Logger.info("ParkScreen: Camera intent launched with EXTRA_OUTPUT, capture_time=" + str(self._capture_time_ms))
+            Logger.info("ParkScreen: Camera intent launched, capture_time=" + str(self._capture_time_ms))
         except Exception as e:
             Logger.warning("ParkScreen: Camera launch error - " + str(e))
             import traceback

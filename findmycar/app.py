@@ -22,31 +22,34 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from .services.gps_service import GPSService
 from .services.storage_service import StorageService
 from .ai.offline_localizer import OfflineLocalizer
-from .screens.home_screen import HomeScreen
+from .screens.map_screen import MapScreen
 from .screens.park_screen import ParkScreen
 from .screens.find_screen import FindScreen
 from .screens.history_screen import HistoryScreen
 from .screens.details_screen import DetailsScreen
 from .ui.compass_widget import CompassWidget
-from .ui.map_widget import OfflineMapWidget
+from .webview_bridge import WebViewBridge
 
 _APP_VERSION = "1.0.0"
 _CRASH_LOG = None
 Builder.load_string("""
 <DrawerItem>:
-    spacing: "12dp"
-    padding: "16dp"
+    spacing: "8dp"
+    padding: "12dp", 0, "12dp", 0
     size_hint_y: None
-    height: "56dp"
+    height: "52dp"
     IconLeftWidget:
         icon: root.icon
         theme_text_color: "Custom"
         text_color: 0.79, 0.82, 0.85, 1
     MDLabel:
         text: root.text
-        font_size: "15sp"
+        font_size: "14sp"
         theme_text_color: "Custom"
         text_color: 0.79, 0.82, 0.85, 1
+        text_size: self.width, None
+        shorten: True
+        valign: "middle"
 """)
 class DrawerItem(MDBoxLayout):
     icon = StringProperty("")
@@ -84,6 +87,7 @@ class FindMyCarApp(MDApp):
         self.gps_service = GPSService()
         self.storage_service = StorageService()
         self.offline_localizer = OfflineLocalizer()
+        self.webview_bridge = WebViewBridge()
         self.nav_drawer = None
         self.screen_manager = None
 
@@ -122,7 +126,7 @@ class FindMyCarApp(MDApp):
         self.screen_manager = ScreenManager(
             transition=NoTransition()
         )
-        self.screen_manager.add_widget(HomeScreen(name="home"))
+        self.screen_manager.add_widget(MapScreen(name="home"))
         self.screen_manager.add_widget(ParkScreen(name="park"))
         self.screen_manager.add_widget(FindScreen(name="find"))
         self.screen_manager.add_widget(HistoryScreen(name="history"))
@@ -201,9 +205,72 @@ class FindMyCarApp(MDApp):
         root.add_widget(self.screen_manager)
         root.add_widget(nav)
         self.nav_drawer = nav
+        self.nav_drawer.bind(state=self._on_drawer_state)
         Clock.schedule_once(lambda dt: self._start_gps(), 0.5)
+        Clock.schedule_once(lambda dt: self._init_webview(), 0.8)
         Clock.schedule_once(lambda dt: self._check_updates_background(), 3)
         return root
+    def _init_webview(self):
+        try:
+            self.webview_bridge.setup(callback=self._on_map_callback)
+            Logger.info("App: WebView bridge initialized")
+        except Exception as e:
+            Logger.warning("App: WebView init failed - " + str(e))
+    def _on_drawer_state(self, instance, state):
+        if state == "close":
+            Clock.schedule_once(lambda dt: self._ensure_map_visible(), 0.05)
+    def _ensure_map_visible(self):
+        if self.screen_manager and self.screen_manager.current == "home":
+            try:
+                self.webview_bridge.show()
+            except:
+                pass
+    def _on_map_callback(self, event, data):
+        Logger.info("App: Map callback event=" + str(event) + " data=" + str(data))
+        if event == "save":
+            self._save_from_map()
+        elif event == "navigate":
+            if data and self.screen_manager and self.screen_manager.has_screen(data):
+                self.screen_manager.current = data
+                screen = self.screen_manager.get_screen(data)
+                if hasattr(screen, "on_enter"):
+                    screen.dispatch("on_enter")
+        elif event == "open_drawer":
+            if self.nav_drawer:
+                self._close_map_for_drawer()
+                self.nav_drawer.set_state("open")
+        elif event == "toast":
+            self._show_snackbar(str(data))
+    def _close_map_for_drawer(self):
+        try:
+            self.webview_bridge.hide()
+        except:
+            pass
+    def _save_from_map(self):
+        try:
+            pos = self.gps_service.get_position()
+            if not pos:
+                self._show_snackbar("GPS non disponibile")
+                self.webview_bridge.send_js("showToast('GPS non disponibile')")
+                return
+            record = self.storage_service.save_parking(pos[0], pos[1], "")
+            Logger.info("App: Saved from map #" + str(record.id))
+            self.webview_bridge.send_js("onSaved()")
+            addr = record.address or f"{pos[0]:.4f}, {pos[1]:.4f}"
+            from datetime import datetime
+            now = datetime.now()
+            time_str = "Oggi " + now.strftime("%H:%M")
+            js = (
+                "updateCarParked("
+                + str(pos[0]) + ","
+                + str(pos[1]) + ","
+                + '"' + str(addr).replace("\\", "\\\\").replace('"', '\\"') + '",'
+                + '"' + time_str + '"'
+                + ")"
+            )
+            self.webview_bridge.send_js(js)
+        except Exception as e:
+            Logger.error("App: Save from map error - " + str(e))
     def _start_gps(self):
         try:
             self.gps_service.start()
