@@ -9,7 +9,7 @@ requirements = python3,kivy,kivymd,plyer,pyjnius,pillow==12.2.0
 orientation = portrait
 osx.python_version = 3
 osx.kivy_version = 2.3.0
-fullscreen = 0
+fullscreen = 1
 
 android.api = 34
 android.minapi = 21
@@ -22,6 +22,7 @@ android.add_background_location = True
 android.accept_sdk_license = True
 android.gradle_dependencies = androidx.core:core:1.12.0
 p4a.local_recipes = .p4a/recipes
+p4a.hook = fix_black_screen
 
 icon = assets/icon.png
 
