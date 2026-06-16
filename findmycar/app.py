@@ -205,10 +205,10 @@ class FindMyCarApp(MDApp):
         root.add_widget(nav)
         self.nav_drawer = nav
         self.nav_drawer.bind(state=self._on_drawer_state)
+        self._refocus_activity()
         Clock.schedule_once(lambda dt: self._start_gps(), 0.5)
         Clock.schedule_once(lambda dt: self._init_webview(), 0.8)
         Clock.schedule_once(lambda dt: self._check_updates_background(), 3)
-        Clock.schedule_once(lambda dt: self._refocus_activity(), 2)
         Clock.schedule_once(lambda dt: self._set_window_bg(), 0.3)
         Logger.info("App: _build returning")
         return root
