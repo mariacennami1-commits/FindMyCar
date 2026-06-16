@@ -1,5 +1,6 @@
 from kivy.logger import Logger
 from kivy.utils import platform
+from threading import Event
 
 
 class WebViewBridge:
@@ -15,11 +16,25 @@ class WebViewBridge:
             Logger.info("WebViewBridge: Not on Android, skipping")
             return
         try:
-            self._create_webview()
+            done = Event()
+            err = [None]
+            from android import mActivity
+            mActivity.runOnUiThread(lambda: self._create_on_ui(done, err))
+            done.wait(timeout=10)
+            if err[0]:
+                raise err[0]
         except Exception as e:
             Logger.error("WebViewBridge: Setup failed - " + str(e))
             import traceback
             Logger.error(traceback.format_exc())
+
+    def _create_on_ui(self, done, err):
+        try:
+            self._create_webview()
+        except Exception as e:
+            err[0] = e
+        finally:
+            done.set()
 
     def _create_webview(self):
         from jnius import autoclass
