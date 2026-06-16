@@ -9,7 +9,10 @@ requirements = python3,kivy,kivymd,plyer,pyjnius,pillow==12.2.0
 orientation = portrait
 osx.python_version = 3
 osx.kivy_version = 2.3.0
-fullscreen = 1
+fullscreen = 0
+
+presplash.filename = assets/logo.png
+android.presplash_color = #131315
 
 android.api = 34
 android.minapi = 21
