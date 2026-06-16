@@ -1,4 +1,136 @@
 import os
+import re
+
+
+def _find_and_patch_p4a_templates():
+    from pythonforandroid.logger import info
+    try:
+        import pythonforandroid
+    except Exception:
+        info("fix_black_screen: could not import pythonforandroid")
+        return
+
+    p4a_root = os.path.dirname(pythonforandroid.__file__)
+    info("fix_black_screen: p4a root = " + str(p4a_root))
+
+    patched_count = 0
+    for root, dirs, files in os.walk(p4a_root):
+        for f in files:
+            if f == "PythonActivity.java":
+                path = os.path.join(root, f)
+                if _patch_python_activity(path):
+                    patched_count += 1
+                    info("fix_black_screen: Patched PythonActivity.java template at " + path)
+            elif f == "SDLActivity.java":
+                path = os.path.join(root, f)
+                if _patch_sdl_activity(path):
+                    patched_count += 1
+                    info("fix_black_screen: Patched SDLActivity.java template at " + path)
+
+    if patched_count == 0:
+        info("fix_black_screen: WARNING - no Java template files found to patch in p4a tree")
+        all_javas = []
+        for root, dirs, files in os.walk(p4a_root):
+            for f in files:
+                if f.endswith(".java"):
+                    all_javas.append(os.path.join(root, f))
+        info("fix_black_screen: All .java files found: " + str(all_javas))
+
+
+def _patch_python_activity(path):
+    with open(path, "r") as f:
+        source = f.read()
+
+    if "fix_black_screen onStart" in source:
+        return False
+
+    # Remove existing onStop()
+    onstop_re = re.compile(
+        r'@Override\s*\n\s*protected\s+void\s+onStop\s*\(\s*\)\s*\{.*?\n\s*\}',
+        re.DOTALL
+    )
+    source, onstop_count = onstop_re.subn("", source)
+
+    # Remove existing onStart()
+    onstart_re = re.compile(
+        r'@Override\s*\n\s*protected\s+void\s+onStart\s*\(\s*\)\s*\{.*?\n\s*\}',
+        re.DOTALL
+    )
+    source, onstart_count = onstart_re.subn("", source)
+
+    # Find class closing brace
+    class_end = source.rfind("\n}")
+    if class_end == -1:
+        class_end = source.rfind("}")
+        if class_end > 0:
+            class_end = source.rfind("\n", 0, class_end)
+            if class_end == -1:
+                class_end = source.rfind("}")
+
+    if class_end <= 0:
+        return False
+
+    overrides = """
+
+    // --- BEGIN fix_black_screen onStart ---
+    @Override
+    protected void onStart() {
+        Log.v("PythonActivity", "fix_black_screen onStart()");
+        if (this.mActivity != null && this.mActivity.mLoadFinished) {
+            super.onStart();
+            Log.v("PythonActivity", "fix_black_screen onStart() - super called (post load)");
+        } else {
+            Log.v("PythonActivity", "fix_black_screen onStart() - DEFERRED (pre load)");
+        }
+    }
+    // --- END fix_black_screen onStart ---
+
+    // --- BEGIN fix_black_screen onStop ---
+    @Override
+    protected void onStop() {
+        Log.v("PythonActivity", "fix_black_screen onStop()");
+        this.mActivity.mOpened = true;
+        if (this.mActivity != null && this.mActivity.mLoadFinished) {
+            super.onStop();
+            Log.v("PythonActivity", "fix_black_screen onStop() - super called (post load)");
+        } else {
+            Log.v("PythonActivity", "fix_black_screen onStop() - DEFERRED (pre load)");
+        }
+    }
+    // --- END fix_black_screen onStop ---
+"""
+    source = source[:class_end] + overrides + "\n}"
+
+    with open(path, "w") as f:
+        f.write(source)
+    return True
+
+
+def _patch_sdl_activity(path):
+    with open(path, "r") as f:
+        source = f.read()
+
+    handle_re = re.compile(
+        r'(void\s+handleNativeState\s*\(\s*\)\s*\{)',
+        re.DOTALL
+    )
+    if not handle_re.search(source):
+        return False
+
+    if "mSurface == null" in source:
+        return False
+
+    source = handle_re.sub(
+        r'\1\n'
+        r'        try {\n'
+        r'            if (mSurface == null) { Log.v("SDL", "handleNativeState() - mSurface is null, returning"); return; }\n'
+        r'        } catch (Exception e) { Log.v("SDL", "handleNativeState() - null check exception: " + e.getMessage()); return; }',
+        source
+    )
+
+    with open(path, "w") as f:
+        f.write(source)
+    return True
 
 
 def prebuild(arch):
@@ -36,126 +168,6 @@ def prebuild(arch):
             f.write(content)
         info("fix_black_screen: Patched AndroidManifest theme -> AppTheme")
 
-
-def postbuild(arch):
-    dist_dir = arch.ctx.dist_dir
-    from pythonforandroid.logger import info
-
-    # Java sources exist at postbuild time (recipes have been built)
-    java_path = os.path.join(
-        dist_dir, "src", "main", "java", "org", "kivy", "android", "PythonActivity.java"
-    )
-
-    if not os.path.exists(java_path):
-        info("fix_black_screen: PythonActivity.java not found at " + java_path)
-        return
-
-    info("fix_black_screen: Found PythonActivity.java at " + java_path)
-
-    with open(java_path, "r") as f:
-        source = f.read()
-
-    # Already patched?
-    if "fix_black_screen onStart" in source:
-        info("fix_black_screen: onStart override already applied, skipping")
-        return
-
-    import re
-
-    # Remove existing onStop()
-    onstop_re = re.compile(
-        r'@Override\s*\n\s*protected\s+void\s+onStop\s*\(\s*\)\s*\{.*?\n\s*\}',
-        re.DOTALL
-    )
-    new_source, onstop_count = onstop_re.subn("", source)
-    if onstop_count > 0:
-        info("fix_black_screen: Removed existing onStop() method (count=" + str(onstop_count) + ")")
-
-    # Remove existing onStart()
-    onstart_re = re.compile(
-        r'@Override\s*\n\s*protected\s+void\s+onStart\s*\(\s*\)\s*\{.*?\n\s*\}',
-        re.DOTALL
-    )
-    new_source, onstart_count = onstart_re.subn("", new_source)
-    if onstart_count > 0:
-        info("fix_black_screen: Removed existing onStart() method (count=" + str(onstart_count) + ")")
-
-    # Find class closing brace
-    class_end = new_source.rfind("\n}")
-    if class_end == -1:
-        class_end = new_source.rfind("}")
-        if class_end > 0:
-            class_end = new_source.rfind("\n", 0, class_end)
-            if class_end == -1:
-                class_end = new_source.rfind("}")
-
-    if class_end > 0:
-        overrides = """
-
-    // --- BEGIN fix_black_screen onStart ---
-    @Override
-    protected void onStart() {
-        Log.v("PythonActivity", "fix_black_screen onStart()");
-        if (this.mActivity != null && this.mActivity.mLoadFinished) {
-            super.onStart();
-            Log.v("PythonActivity", "fix_black_screen onStart() - super called (post load)");
-        } else {
-            Log.v("PythonActivity", "fix_black_screen onStart() - DEFERRED (pre load)");
-        }
-    }
-    // --- END fix_black_screen onStart ---
-
-    // --- BEGIN fix_black_screen onStop ---
-    @Override
-    protected void onStop() {
-        Log.v("PythonActivity", "fix_black_screen onStop()");
-        this.mActivity.mOpened = true;
-        if (this.mActivity != null && this.mActivity.mLoadFinished) {
-            super.onStop();
-            Log.v("PythonActivity", "fix_black_screen onStop() - super called (post load)");
-        } else {
-            Log.v("PythonActivity", "fix_black_screen onStop() - DEFERRED (pre load)");
-        }
-    }
-    // --- END fix_black_screen onStop ---
-"""
-        new_source = new_source[:class_end] + overrides + "\n}"
-        info("fix_black_screen: Inserted onStart() and onStop() overrides at end of class")
-    else:
-        info("fix_black_screen: WARNING - could not find class closing brace")
-        return
-
-    with open(java_path, "w") as f:
-        f.write(new_source)
-    info("fix_black_screen: PythonActivity.java patched successfully")
-
-    # Also patch SDLActivity.java handleNativeState() null check
-    sdl_dir = os.path.join(dist_dir, "src", "main", "java", "org", "libsdl", "app")
-    sdl_path = os.path.join(sdl_dir, "SDLActivity.java")
-
-    if os.path.exists(sdl_path):
-        with open(sdl_path, "r") as f:
-            sdl_source = f.read()
-
-        handle_re = re.compile(
-            r'(void\s+handleNativeState\s*\(\s*\)\s*\{)',
-            re.DOTALL
-        )
-        if handle_re.search(sdl_source):
-            if "mSurface == null" in sdl_source:
-                info("fix_black_screen: handleNativeState() already patched")
-            else:
-                sdl_source = handle_re.sub(
-                    r'\1\n'
-                    r'        try {\n'
-                    r'            if (mSurface == null) { Log.v("SDL", "handleNativeState() - mSurface is null, returning"); return; }\n'
-                    r'        } catch (Exception e) { Log.v("SDL", "handleNativeState() - null check exception: " + e.getMessage()); return; }',
-                    sdl_source
-                )
-                with open(sdl_path, "w") as f:
-                    f.write(sdl_source)
-                info("fix_black_screen: Added null check in SDLActivity.handleNativeState()")
-        else:
-            info("fix_black_screen: handleNativeState() not found in SDLActivity.java")
-    else:
-        info("fix_black_screen: SDLActivity.java not found at " + sdl_path)
+    # 3. Patch p4a Java SOURCE TEMPLATES before SDL2 recipe copies them
+    info("fix_black_screen: Searching for p4a Java template files to patch...")
+    _find_and_patch_p4a_templates()
