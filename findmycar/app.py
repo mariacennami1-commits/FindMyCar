@@ -120,7 +120,6 @@ class FindMyCarApp(MDApp):
 
     def _build(self):
         self.theme_cls.theme_style = "Dark"
-        Window.clearcolor = (0.075, 0.075, 0.082, 1)
         from kivymd.uix.navigationdrawer import MDNavigationLayout
         root = MDNavigationLayout()
         self.screen_manager = ScreenManager(
@@ -210,7 +209,16 @@ class FindMyCarApp(MDApp):
         Clock.schedule_once(lambda dt: self._init_webview(), 0.8)
         Clock.schedule_once(lambda dt: self._check_updates_background(), 3)
         Clock.schedule_once(lambda dt: self._refocus_activity(), 2)
+        Clock.schedule_once(lambda dt: self._set_window_bg(), 0.3)
+        Logger.info("App: _build returning")
         return root
+    def _set_window_bg(self):
+        try:
+            Window.clearcolor = (0.075, 0.075, 0.082, 1)
+            Logger.info("App: Window background set")
+        except Exception as e:
+            Logger.warning("App: Window bg error - " + str(e))
+
     def _refocus_activity(self):
         try:
             from kivy.utils import platform
