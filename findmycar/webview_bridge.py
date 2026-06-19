@@ -16,7 +16,16 @@ class WebViewBridge:
             return
         try:
             from android import mActivity
-            mActivity.runOnUiThread(self._create_webview)
+            from jnius import PythonJavaClass, java_method
+            class _Runnable(PythonJavaClass):
+                __javainterfaces__ = ['java/lang/Runnable']
+                def __init__(self, func):
+                    super().__init__()
+                    self.func = func
+                @java_method('()V', name='run')
+                def run(self):
+                    self.func()
+            mActivity.runOnUiThread(_Runnable(self._create_webview))
         except Exception as e:
             Logger.error("WebViewBridge: Setup failed - " + str(e))
             import traceback
