@@ -32,32 +32,33 @@ class WebViewBridge:
             Logger.error(traceback.format_exc())
 
     def _create_webview(self):
-        from jnius import autoclass
-        from android import mActivity
+        try:
+            from jnius import autoclass
+            from android import mActivity
 
-        WebView = autoclass("android.webkit.WebView")
-        WebSettings = autoclass("android.webkit.WebSettings")
-        WebViewClient = autoclass("android.webkit.WebViewClient")
-        RelativeLayout = autoclass("android.widget.RelativeLayout")
-        ViewGroup = autoclass("android.view.ViewGroup")
-        View = autoclass("android.view.View")
+            WebView = autoclass("android.webkit.WebView")
+            WebSettings = autoclass("android.webkit.WebSettings")
+            WebViewClient = autoclass("android.webkit.WebViewClient")
+            RelativeLayout = autoclass("android.widget.RelativeLayout")
+            ViewGroup = autoclass("android.view.ViewGroup")
+            View = autoclass("android.view.View")
 
-        PythonActivity = autoclass("org.kivy.android.PythonActivity")
-        activity = PythonActivity.mActivity
+            PythonActivity = autoclass("org.kivy.android.PythonActivity")
+            activity = PythonActivity.mActivity
 
-        self._webview = WebView(activity)
-        self._webview.setBackgroundColor(0x00131315)
+            self._webview = WebView(activity)
+            self._webview.setBackgroundColor(0x00131315)
 
-        settings = self._webview.getSettings()
-        settings.setJavaScriptEnabled(True)
-        settings.setDomStorageEnabled(True)
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT)
-        settings.setAllowFileAccess(False)
-        settings.setGeolocationEnabled(True)
+            settings = self._webview.getSettings()
+            settings.setJavaScriptEnabled(True)
+            settings.setDomStorageEnabled(True)
+            settings.setCacheMode(WebSettings.LOAD_DEFAULT)
+            settings.setAllowFileAccess(False)
+            settings.setGeolocationEnabled(True)
 
-        self._webview.getSettings().setMixedContentMode(
-            WebSettings().MIXED_CONTENT_ALWAYS_ALLOW
-        )
+            settings.setMixedContentMode(
+                WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            )
 
         class BridgeClient(WebViewClient):
             def __init__(self, bridge):
@@ -97,6 +98,10 @@ class WebViewBridge:
         activity.mLayout.addView(self._webview, params)
         self._webview.setVisibility(View.GONE)
         Logger.info("WebViewBridge: Created and hidden")
+        except Exception as e:
+            Logger.error("WebViewBridge: create error - " + str(e))
+            import traceback
+            Logger.error(traceback.format_exc())
 
     def _handle_url(self, url):
         Logger.info("WebViewBridge: URL=" + str(url))
@@ -146,7 +151,17 @@ class WebViewBridge:
             return
         try:
             from android import mActivity
-            mActivity.runOnUiThread(lambda: self._webview.evaluateJavascript(js_code, None))
+            from jnius import PythonJavaClass, java_method
+            class _EvaluateJSRunnable(PythonJavaClass):
+                __javainterfaces__ = ['java/lang/Runnable']
+                def __init__(self, wv, code):
+                    super().__init__()
+                    self.wv = wv
+                    self.code = code
+                @java_method('()V', name='run')
+                def run(self):
+                    self.wv.evaluateJavascript(self.code, None)
+            mActivity.runOnUiThread(_EvaluateJSRunnable(self._webview, js_code))
         except Exception as e:
             Logger.warning("WebViewBridge: send_js error - " + str(e))
 
