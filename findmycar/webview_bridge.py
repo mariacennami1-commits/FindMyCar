@@ -60,44 +60,44 @@ class WebViewBridge:
                 WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             )
 
-        class BridgeClient(WebViewClient):
-            def __init__(self, bridge):
-                super().__init__()
-                self._bridge = bridge
+            class BridgeClient(WebViewClient):
+                def __init__(self, bridge):
+                    super().__init__()
+                    self._bridge = bridge
 
-            def shouldOverrideUrlLoading(self, view, request):
-                url = request.getUrl().toString()
-                if url and url.startswith("app://"):
-                    self._bridge._handle_url(url)
-                    return True
-                return False
+                def shouldOverrideUrlLoading(self, view, request):
+                    url = request.getUrl().toString()
+                    if url and url.startswith("app://"):
+                        self._bridge._handle_url(url)
+                        return True
+                    return False
 
-            def onPageFinished(self, view, url):
-                Logger.info("WebViewBridge: Page loaded: " + str(url))
-                if self._bridge._callback:
-                    self._bridge._callback("page_loaded", None)
+                def onPageFinished(self, view, url):
+                    Logger.info("WebViewBridge: Page loaded: " + str(url))
+                    if self._bridge._callback:
+                        self._bridge._callback("page_loaded", None)
 
-        client = BridgeClient(self)
-        self._webview.setWebViewClient(client)
+            client = BridgeClient(self)
+            self._webview.setWebViewClient(client)
 
-        String = autoclass("java.lang.String")
-        from .map_html import MAP_HTML
-        self._webview.loadDataWithBaseURL(
-            None,
-            String(MAP_HTML),
-            String("text/html"),
-            String("UTF-8"),
-            None,
-        )
-        Logger.info("WebViewBridge: HTML loaded via loadDataWithBaseURL")
+            String = autoclass("java.lang.String")
+            from .map_html import MAP_HTML
+            self._webview.loadDataWithBaseURL(
+                None,
+                String(MAP_HTML),
+                String("text/html"),
+                String("UTF-8"),
+                None,
+            )
+            Logger.info("WebViewBridge: HTML loaded via loadDataWithBaseURL")
 
-        params = RelativeLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT,
-        )
-        activity.mLayout.addView(self._webview, params)
-        self._webview.setVisibility(View.GONE)
-        Logger.info("WebViewBridge: Created and hidden")
+            params = RelativeLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            )
+            activity.mLayout.addView(self._webview, params)
+            self._webview.setVisibility(View.GONE)
+            Logger.info("WebViewBridge: Created and hidden")
         except Exception as e:
             Logger.error("WebViewBridge: create error - " + str(e))
             import traceback
