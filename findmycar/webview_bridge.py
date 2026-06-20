@@ -1,5 +1,51 @@
+import traceback as _tb
 from kivy.logger import Logger
 from kivy.utils import platform
+
+
+class _JSBridge:
+    """Lazy holder for the PythonJavaClass JS interface."""
+    _class = None
+
+    @classmethod
+    def get_class(cls):
+        if cls._class is None:
+            from jnius import PythonJavaClass, java_method
+            class _JSI(PythonJavaClass):
+                __javainterfaces__ = ['android/webkit/JavascriptInterface']
+                def __init__(self, bridge):
+                    super().__init__()
+                    self._bridge = bridge
+                @java_method('(Ljava/lang/String;)V')
+                def onUrl(self, url):
+                    self._bridge._handle_url(url)
+                @java_method('()V')
+                def onPageReady(self):
+                    Logger.info("WebViewBridge: JS page ready")
+                    if self._bridge._callback:
+                        self._bridge._callback("page_loaded", None)
+            cls._class = _JSI
+        return cls._class
+
+
+class _UIRunnable:
+    """Lazy holder for the UI-thread Runnable PythonJavaClass."""
+    _class = None
+
+    @classmethod
+    def get_class(cls):
+        if cls._class is None:
+            from jnius import PythonJavaClass, java_method
+            class _R(PythonJavaClass):
+                __javainterfaces__ = ['java/lang/Runnable']
+                def __init__(self, func):
+                    super().__init__()
+                    self.func = func
+                @java_method('()V', name='run')
+                def run(self):
+                    self.func()
+            cls._class = _R
+        return cls._class
 
 
 class WebViewBridge:
@@ -16,38 +62,36 @@ class WebViewBridge:
             return
         try:
             from android import mActivity
-            from jnius import PythonJavaClass, java_method
-            class _Runnable(PythonJavaClass):
-                __javainterfaces__ = ['java/lang/Runnable']
-                def __init__(self, func):
-                    super().__init__()
-                    self.func = func
-                @java_method('()V', name='run')
-                def run(self):
-                    self.func()
-            mActivity.runOnUiThread(_Runnable(self._create_webview))
+            Runnable = _UIRunnable.get_class()
+            mActivity.runOnUiThread(Runnable(self._create_webview))
         except Exception as e:
             Logger.error("WebViewBridge: Setup failed - " + str(e))
-            import traceback
-            Logger.error(traceback.format_exc())
+            Logger.error(_tb.format_exc())
 
     def _create_webview(self):
+        steps = []
         try:
             from jnius import autoclass
             from android import mActivity
 
             WebView = autoclass("android.webkit.WebView")
+            steps.append("WebView autoclass OK")
             WebSettings = autoclass("android.webkit.WebSettings")
+            steps.append("WebSettings autoclass OK")
             WebViewClient = autoclass("android.webkit.WebViewClient")
+            steps.append("WebViewClient autoclass OK")
             RelativeLayout = autoclass("android.widget.RelativeLayout")
             ViewGroup = autoclass("android.view.ViewGroup")
             View = autoclass("android.view.View")
+            steps.append("Layout/View autoclass OK")
 
-            PythonActivity = autoclass("org.kivy.android.PythonActivity")
-            activity = PythonActivity.mActivity
+            activity = mActivity
+            steps.append("Got activity")
 
             self._webview = WebView(activity)
+            steps.append("WebView instance created")
             self._webview.setBackgroundColor(0x00131315)
+            steps.append("Background set")
 
             settings = self._webview.getSettings()
             settings.setJavaScriptEnabled(True)
@@ -55,30 +99,19 @@ class WebViewBridge:
             settings.setCacheMode(WebSettings.LOAD_DEFAULT)
             settings.setAllowFileAccess(False)
             settings.setGeolocationEnabled(True)
+            settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW)
+            steps.append("Settings configured")
 
-            settings.setMixedContentMode(
-                WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-            )
+            # Use a plain WebViewClient instance (not subclassed — avoid pyjnius limitation)
+            wvc = WebViewClient()
+            self._webview.setWebViewClient(wvc)
+            steps.append("WebViewClient set")
 
-            class BridgeClient(WebViewClient):
-                def __init__(self, bridge):
-                    super().__init__()
-                    self._bridge = bridge
-
-                def shouldOverrideUrlLoading(self, view, request):
-                    url = request.getUrl().toString()
-                    if url and url.startswith("app://"):
-                        self._bridge._handle_url(url)
-                        return True
-                    return False
-
-                def onPageFinished(self, view, url):
-                    Logger.info("WebViewBridge: Page loaded: " + str(url))
-                    if self._bridge._callback:
-                        self._bridge._callback("page_loaded", None)
-
-            client = BridgeClient(self)
-            self._webview.setWebViewClient(client)
+            # Add JS bridge interface for native communication
+            JSI = _JSBridge.get_class()
+            js_interface = JSI(self)
+            self._webview.addJavascriptInterface(js_interface, "Android")
+            steps.append("JS interface added")
 
             String = autoclass("java.lang.String")
             from .map_html import MAP_HTML
@@ -89,19 +122,20 @@ class WebViewBridge:
                 String("UTF-8"),
                 None,
             )
-            Logger.info("WebViewBridge: HTML loaded via loadDataWithBaseURL")
+            steps.append("HTML loadDataWithBaseURL called")
 
             params = RelativeLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
             )
             activity.mLayout.addView(self._webview, params)
+            steps.append("WebView added to mLayout")
             self._webview.setVisibility(View.GONE)
             Logger.info("WebViewBridge: Created and hidden")
         except Exception as e:
-            Logger.error("WebViewBridge: create error - " + str(e))
-            import traceback
-            Logger.error(traceback.format_exc())
+            Logger.error("WebViewBridge: create error at step[" + str(len(steps)) + "]: " + str(steps[len(steps)-1] if steps else "start"))
+            Logger.error("WebViewBridge: exception=" + str(e))
+            Logger.error(_tb.format_exc())
 
     def _handle_url(self, url):
         Logger.info("WebViewBridge: URL=" + str(url))

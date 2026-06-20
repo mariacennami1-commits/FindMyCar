@@ -214,6 +214,7 @@ map = L.map('map', {
   zoomAnimation: true,
 });
 map.addLayer(osm);
+try { Android.onPageReady(); } catch(e) {}
 
 var userIcon = L.divIcon({
   html: '<div style="width:20px;height:20px;background:#4285f4;border:3px solid #fff;border-radius:50%;box-shadow:0 0 8px rgba(66,133,244,0.6);"></div>',
@@ -271,7 +272,7 @@ function showToast(msg) {
   setTimeout(function() { el.classList.remove('show'); }, 3000);
 }
 
-function appCall(url) { window.location = url; }
+function appCall(url) { try { Android.onUrl(url); } catch(e) { console.warn('JS bridge unavailable', e); } }
 
 function savePosition() {
   if (currentLat === null) { showToast('GPS non ancora disponibile'); return; }
