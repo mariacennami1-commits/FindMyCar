@@ -124,7 +124,7 @@ class WebViewBridge:
             )
             steps.append("HTML loadDataWithBaseURL called")
 
-            params = RelativeLayout.LayoutParams(
+            params = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
             )
