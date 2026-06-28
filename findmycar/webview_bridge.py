@@ -82,6 +82,7 @@ class WebViewBridge:
             steps.append("WebViewClient autoclass OK")
             RelativeLayout = autoclass("android.widget.RelativeLayout")
             ViewGroup = autoclass("android.view.ViewGroup")
+            LayoutParams = autoclass("android.view.ViewGroup$LayoutParams")
             View = autoclass("android.view.View")
             steps.append("Layout/View autoclass OK")
 
@@ -124,9 +125,9 @@ class WebViewBridge:
             )
             steps.append("HTML loadDataWithBaseURL called")
 
-            params = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
+            params = LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT,
             )
             activity.mLayout.addView(self._webview, params)
             steps.append("WebView added to mLayout")
