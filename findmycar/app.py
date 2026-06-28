@@ -239,6 +239,7 @@ class FindMyCarApp(MDApp):
         try:
             self.webview_bridge.setup(callback=self._on_map_callback)
             Logger.info("App: WebView bridge initialized")
+            Clock.schedule_once(lambda dt: self._ensure_map_visible(), 0.5)
         except Exception as e:
             Logger.warning("App: WebView init failed - " + str(e))
     def _on_drawer_state(self, instance, state):
@@ -248,6 +249,9 @@ class FindMyCarApp(MDApp):
         if self.screen_manager and self.screen_manager.current == "home":
             try:
                 self.webview_bridge.show()
+                screen = self.screen_manager.get_screen("home")
+                if screen and hasattr(screen, "on_enter"):
+                    screen.dispatch("on_enter")
             except:
                 pass
     def _on_map_callback(self, event, data):
