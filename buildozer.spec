@@ -4,8 +4,8 @@ package.name = findmycar
 package.domain = com.findmycar
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
-version = 1.0.0
-requirements = python3,kivy,kivymd,plyer,pyjnius,pillow==12.2.0,sdl2_fix
+version = 1.0.100
+requirements = python3,kivy,kivymd,plyer,pyjnius,pillow==12.2.0
 orientation = portrait
 osx.python_version = 3
 osx.kivy_version = 2.3.0
@@ -25,7 +25,6 @@ android.add_background_location = True
 android.accept_sdk_license = True
 android.gradle_dependencies = androidx.core:core:1.12.0
 p4a.local_recipes = .p4a/recipes
-p4a.hook = .p4a/hooks/fix_black_screen.py
 
 icon = assets/icon.png
 
