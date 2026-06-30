@@ -246,14 +246,24 @@ class FindMyCarApp(MDApp):
         if state == "close":
             Clock.schedule_once(lambda dt: self._ensure_map_visible(), 0.05)
     def _ensure_map_visible(self):
-        if self.screen_manager and self.screen_manager.current == "home":
-            try:
-                self.webview_bridge.show()
-                screen = self.screen_manager.get_screen("home")
-                if screen and hasattr(screen, "on_enter"):
-                    screen.dispatch("on_enter")
-            except:
-                pass
+        if not self.screen_manager:
+            Logger.warning("App: _ensure_map_visible - no screen manager")
+            return
+        if self.screen_manager.current != "home":
+            Logger.warning("App: _ensure_map_visible - current is " + str(self.screen_manager.current))
+            return
+        if not self.webview_bridge._webview:
+            Logger.warning("App: _ensure_map_visible - webview not ready, retrying")
+            Clock.schedule_once(lambda dt: self._ensure_map_visible(), 0.3)
+            return
+        try:
+            self.webview_bridge.show()
+            screen = self.screen_manager.get_screen("home")
+            if screen and hasattr(screen, "on_enter"):
+                screen.dispatch("on_enter")
+            Logger.info("App: _ensure_map_visible done")
+        except Exception as e:
+            Logger.warning("App: _ensure_map_visible error: " + str(e))
     def _on_map_callback(self, event, data):
         Logger.info("App: Map callback event=" + str(event) + " data=" + str(data))
         if event == "save":
