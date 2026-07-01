@@ -83,7 +83,6 @@ class WebViewBridge:
             RelativeLayout = autoclass("android.widget.RelativeLayout")
             ViewGroup = autoclass("android.view.ViewGroup")
             LayoutParams = autoclass("android.view.ViewGroup$LayoutParams")
-            View = autoclass("android.view.View")
             steps.append("Layout/View autoclass OK")
 
             activity = mActivity
@@ -131,8 +130,7 @@ class WebViewBridge:
             )
             activity.mLayout.addView(self._webview, params)
             steps.append("WebView added to mLayout")
-            self._webview.setVisibility(View.GONE)
-            Logger.info("WebViewBridge: Created and hidden")
+            Logger.info("WebViewBridge: Created and ready")
         except Exception as e:
             Logger.error("WebViewBridge: create error at step[" + str(len(steps)) + "]: " + str(steps[len(steps)-1] if steps else "start"))
             Logger.error("WebViewBridge: exception=" + str(e))
