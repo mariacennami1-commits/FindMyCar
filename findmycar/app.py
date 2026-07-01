@@ -239,9 +239,22 @@ class FindMyCarApp(MDApp):
         try:
             self.webview_bridge.setup(callback=self._on_map_callback)
             Logger.info("App: WebView bridge initialized")
+            self.gps_service.add_listener(self._on_gps_update)
             Clock.schedule_once(lambda dt: self._ensure_map_visible(), 0.5)
         except Exception as e:
             Logger.warning("App: WebView init failed - " + str(e))
+
+    def _on_gps_update(self, gps_service):
+        lat = gps_service.latitude
+        lng = gps_service.longitude
+        if lat is None or lng is None:
+            return
+        if not self.webview_bridge._webview:
+            return
+        acc = gps_service.accuracy or 10
+        bearing = gps_service.bearing or 0
+        js = f"updatePosition({lat}, {lng}, {acc}, {bearing})"
+        self.webview_bridge.send_js(js)
     def _on_drawer_state(self, instance, state):
         if state == "close":
             Clock.schedule_once(lambda dt: self._ensure_map_visible(), 0.05)
