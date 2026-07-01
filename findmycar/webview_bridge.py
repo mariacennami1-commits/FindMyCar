@@ -90,7 +90,7 @@ class WebViewBridge:
 
             self._webview = WebView(activity)
             steps.append("WebView instance created")
-            self._webview.setBackgroundColor(0x00131315)
+            self._webview.setBackgroundColor(0xFF131315)
             steps.append("Background set")
 
             settings = self._webview.getSettings()
