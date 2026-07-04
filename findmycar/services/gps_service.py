@@ -1,7 +1,7 @@
 import threading
 import time
+import os
 from kivy.logger import Logger
-from plyer import gps
 from kivy.clock import mainthread
 
 
@@ -16,11 +16,27 @@ class GPSService:
         self.is_running = False
         self.listeners = []
         self.last_fix_time = None
+        self._gps = None
+        self._init_gps()
+
+    def _init_gps(self):
+        try:
+            from kivy.utils import platform
+            if platform == 'android':
+                from .android_gps import AndroidGPS
+                self._gps = AndroidGPS()
+                Logger.info('GPSService: Using AndroidGPS (native LocationListener)')
+            else:
+                raise ImportError('Non-Android platform')
+        except Exception:
+            from plyer import gps
+            self._gps = gps
+            Logger.info('GPSService: Using plyer GPS')
 
     def start(self, min_time=1000, min_distance=1):
         try:
-            gps.configure(on_location=self._on_location, on_status=self._on_status)
-            gps.start(min_time, min_distance)
+            self._gps.configure(on_location=self._on_location, on_status=self._on_status)
+            self._gps.start(min_time, min_distance)
             self.is_running = True
             Logger.info("GPSService: GPS started")
         except Exception as e:
@@ -28,7 +44,7 @@ class GPSService:
 
     def stop(self):
         try:
-            gps.stop()
+            self._gps.stop()
             self.is_running = False
             Logger.info("GPSService: GPS stopped")
         except Exception as e:

@@ -4,7 +4,7 @@ package.name = findmycar
 package.domain = com.findmycar
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
-version = 1.0.107
+version = 1.0.109
 requirements = python3,kivy,kivymd,plyer,pyjnius,pillow==12.2.0,sdl2_fix
 orientation = portrait
 osx.python_version = 3
@@ -24,6 +24,7 @@ android.wakelock = True
 android.add_background_location = True
 android.accept_sdk_license = True
 android.gradle_dependencies = androidx.core:core:1.12.0
+android.add_src = src
 p4a.local_recipes = .p4a/recipes
 
 icon = assets/icon.png

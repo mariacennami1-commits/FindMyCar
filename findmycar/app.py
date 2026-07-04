@@ -249,8 +249,6 @@ class FindMyCarApp(MDApp):
         lng = gps_service.longitude
         if lat is None or lng is None:
             return
-        if not self.webview_bridge._webview:
-            return
         acc = gps_service.accuracy or 10
         bearing = gps_service.bearing or 0
         js = f"updatePosition({lat}, {lng}, {acc}, {bearing})"
@@ -325,10 +323,27 @@ class FindMyCarApp(MDApp):
             Logger.error("App: Save from map error - " + str(e))
     def _start_gps(self):
         try:
-            self.gps_service.start()
-            Logger.info("App: GPS started")
+            from kivy.utils import platform
+            if platform == "android":
+                from android.permissions import request_permissions, Permission
+                request_permissions(
+                    [Permission.ACCESS_FINE_LOCATION, Permission.ACCESS_COARSE_LOCATION],
+                    callback=self._on_location_permission,
+                )
+            else:
+                self.gps_service.start()
+                Logger.info("App: GPS started")
         except Exception as e:
             Logger.warning(f"App: GPS start failed - {e}")
+
+    def _on_location_permission(self, permissions, grant_results):
+        if len(grant_results) > 0 and all(r for r in grant_results):
+            Logger.info("App: Location permission granted")
+            self.gps_service.start()
+            Logger.info("App: GPS started")
+        else:
+            Logger.warning("App: Location permission denied")
+            self._show_snackbar("Permesso GPS negato")
     def _navigate_to(self, screen_name):
         if self.nav_drawer:
             self.nav_drawer.set_state("close")

@@ -11,17 +11,20 @@ class _JSBridge:
     def get_class(cls):
         if cls._class is None:
             from jnius import PythonJavaClass, java_method
+            ANNO = 'Landroid/webkit/JavascriptInterface;'
             class _JSI(PythonJavaClass):
                 __javainterfaces__ = ['android/webkit/JavascriptInterface']
                 def __init__(self, bridge):
                     super().__init__()
                     self._bridge = bridge
-                @java_method('(Ljava/lang/String;)V')
+                @java_method('(Ljava/lang/String;)V', annotation=ANNO)
                 def onUrl(self, url):
                     self._bridge._handle_url(url)
-                @java_method('()V')
+                @java_method('()V', annotation=ANNO)
                 def onPageReady(self):
                     Logger.info("WebViewBridge: JS page ready")
+                    self._bridge._page_loaded = True
+                    self._bridge._flush_pending()
                     if self._bridge._callback:
                         self._bridge._callback("page_loaded", None)
             cls._class = _JSI
@@ -54,6 +57,8 @@ class WebViewBridge:
 
     def __init__(self):
         self._callback = None
+        self._page_loaded = False
+        self._pending_js = []
 
     def setup(self, callback=None):
         self._callback = callback
@@ -144,6 +149,10 @@ class WebViewBridge:
             command = parts[0]
             arg = parts[1] if len(parts) > 1 else None
             Logger.info("WebViewBridge: command=" + str(command) + " arg=" + str(arg))
+            if command == "page_loaded":
+                self._page_loaded = True
+                self._flush_pending()
+                return
             if self._callback:
                 if command == "save":
                     self._callback("save", None)
@@ -157,6 +166,15 @@ class WebViewBridge:
                     self._callback("unknown", command)
         except Exception as e:
             Logger.error("WebViewBridge: URL handler error - " + str(e))
+
+    def _flush_pending(self):
+        if not self._webview:
+            self._pending_js = []
+            return
+        q = self._pending_js[:]
+        self._pending_js = []
+        for code in q:
+            self._do_send_js(code)
 
     def show(self):
         if not self._webview:
@@ -182,20 +200,26 @@ class WebViewBridge:
 
     def send_js(self, js_code):
         if not self._webview:
+            Logger.warning("WebViewBridge: send_js skipped - no webview")
             return
+        if not self._page_loaded:
+            Logger.info("WebViewBridge: queue JS until page loaded")
+            self._pending_js.append(js_code)
+            if len(self._pending_js) > 100:
+                self._pending_js.pop(0)
+            return
+        self._do_send_js(js_code)
+
+    def _do_send_js(self, js_code):
+        if not self._webview:
+            return
+        Logger.info("WebViewBridge: send_js: " + js_code[:120])
         try:
             from android import mActivity
-            from jnius import PythonJavaClass, java_method
-            class _EvaluateJSRunnable(PythonJavaClass):
-                __javainterfaces__ = ['java/lang/Runnable']
-                def __init__(self, wv, code):
-                    super().__init__()
-                    self.wv = wv
-                    self.code = code
-                @java_method('()V', name='run')
-                def run(self):
-                    self.wv.evaluateJavascript(self.code, None)
-            mActivity.runOnUiThread(_EvaluateJSRunnable(self._webview, js_code))
+            wv = self._webview
+            code = js_code
+            Runnable = _UIRunnable.get_class()
+            mActivity.runOnUiThread(Runnable(lambda: wv.evaluateJavascript(code, None)))
         except Exception as e:
             Logger.warning("WebViewBridge: send_js error - " + str(e))
 

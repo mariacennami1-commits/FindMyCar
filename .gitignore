@@ -6,3 +6,4 @@ __pycache__/
 apk.zip
 bin/
 buildozer.spec.bak
+.buildozer/
