@@ -30,7 +30,7 @@ from .screens.details_screen import DetailsScreen
 from .ui.compass_widget import CompassWidget
 from .webview_bridge import WebViewBridge
 
-_APP_VERSION = "1.0.0"
+_APP_VERSION = "1.0.111"
 _CRASH_LOG = None
 Builder.load_string("""
 <DrawerItem>:

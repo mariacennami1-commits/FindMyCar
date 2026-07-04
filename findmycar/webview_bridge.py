@@ -3,32 +3,24 @@ from kivy.logger import Logger
 from kivy.utils import platform
 
 
-class _JSBridge:
-    """Lazy holder for the PythonJavaClass JS interface."""
-    _class = None
+class _NativeBridge:
+    """Wrapper around the native Java NativeJSBridge class (has proper @JavascriptInterface)."""
+    _cls = None
 
     @classmethod
     def get_class(cls):
-        if cls._class is None:
-            from jnius import PythonJavaClass, java_method
-            ANNO = 'Landroid/webkit/JavascriptInterface;'
-            class _JSI(PythonJavaClass):
-                __javainterfaces__ = ['android/webkit/JavascriptInterface']
-                def __init__(self, bridge):
-                    super().__init__()
-                    self._bridge = bridge
-                @java_method('(Ljava/lang/String;)V', annotation=ANNO)
-                def onUrl(self, url):
-                    self._bridge._handle_url(url)
-                @java_method('()V', annotation=ANNO)
-                def onPageReady(self):
-                    Logger.info("WebViewBridge: JS page ready")
-                    self._bridge._page_loaded = True
-                    self._bridge._flush_pending()
-                    if self._bridge._callback:
-                        self._bridge._callback("page_loaded", None)
-            cls._class = _JSI
-        return cls._class
+        if cls._cls is None:
+            from jnius import autoclass
+            cls._cls = autoclass('com.findmycar.gps.NativeJSBridge')
+        return cls._cls
+
+    @classmethod
+    def poll(cls):
+        NB = cls.get_class()
+        if NB.hasPendingUrl():
+            url = NB.getPendingUrl()
+            return str(url) if url else None
+        return None
 
 
 class _UIRunnable:
@@ -59,6 +51,7 @@ class WebViewBridge:
         self._callback = None
         self._page_loaded = False
         self._pending_js = []
+        self._poll_event = None
 
     def setup(self, callback=None):
         self._callback = callback
@@ -72,6 +65,14 @@ class WebViewBridge:
         except Exception as e:
             Logger.error("WebViewBridge: Setup failed - " + str(e))
             Logger.error(_tb.format_exc())
+        from kivy.clock import Clock
+        self._poll_event = Clock.schedule_interval(self._poll_bridge, 0.2)
+
+    def _poll_bridge(self, dt):
+        url = _NativeBridge.poll()
+        if url:
+            Logger.info("WebViewBridge: poll url=" + str(url))
+            self._handle_url(url)
 
     def _create_webview(self):
         steps = []
@@ -113,9 +114,9 @@ class WebViewBridge:
             self._webview.setWebViewClient(wvc)
             steps.append("WebViewClient set")
 
-            # Add JS bridge interface for native communication
-            JSI = _JSBridge.get_class()
-            js_interface = JSI(self)
+            # Add native Java JS bridge interface (has @JavascriptInterface)
+            NB = _NativeBridge.get_class()
+            js_interface = NB()
             self._webview.addJavascriptInterface(js_interface, "Android")
             steps.append("JS interface added")
 
