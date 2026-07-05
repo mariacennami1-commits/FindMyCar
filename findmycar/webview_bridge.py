@@ -182,20 +182,35 @@ class WebViewBridge:
             return
         try:
             from jnius import autoclass
+            from android import mActivity
             View = autoclass("android.view.View")
-            self._webview.setVisibility(View.VISIBLE)
-            Logger.info("WebViewBridge: Shown")
+            wv = self._webview
+            Runnable = _UIRunnable.get_class()
+            mActivity.runOnUiThread(Runnable(lambda: wv.setVisibility(View.VISIBLE)))
         except Exception as e:
             Logger.error("WebViewBridge: show error - " + str(e))
 
     def hide(self):
         if not self._webview:
+            Logger.warning("WebViewBridge: hide skipped - no webview")
             return
         try:
             from jnius import autoclass
+            from android import mActivity
             View = autoclass("android.view.View")
-            self._webview.setVisibility(View.GONE)
-            Logger.info("WebViewBridge: Hidden")
+            import threading
+            wv = self._webview
+            done = threading.Event()
+            Runnable = _UIRunnable.get_class()
+            def _hide_on_ui():
+                try:
+                    wv.setVisibility(View.GONE)
+                    Logger.info("WebViewBridge: Hidden")
+                except Exception as e:
+                    Logger.error("WebViewBridge: hide_on_ui error - " + str(e))
+                done.set()
+            mActivity.runOnUiThread(Runnable(_hide_on_ui))
+            done.wait(timeout=2.0)
         except Exception as e:
             Logger.error("WebViewBridge: hide error - " + str(e))
 

@@ -30,7 +30,7 @@ from .screens.details_screen import DetailsScreen
 from .ui.compass_widget import CompassWidget
 from .webview_bridge import WebViewBridge
 
-_APP_VERSION = "1.0.111"
+_APP_VERSION = "1.0.112"
 _CRASH_LOG = None
 Builder.load_string("""
 <DrawerItem>:
@@ -292,10 +292,12 @@ class FindMyCarApp(MDApp):
         elif event == "toast":
             self._show_snackbar(str(data))
     def _close_map_for_drawer(self):
+        Logger.info("App: close map for drawer")
         try:
             self.webview_bridge.hide()
-        except:
-            pass
+            Logger.info("App: webview hidden for drawer")
+        except Exception as e:
+            Logger.error("App: close map error - " + str(e))
     def _save_from_map(self):
         try:
             pos = self.gps_service.get_position()
