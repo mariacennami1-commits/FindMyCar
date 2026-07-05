@@ -162,8 +162,10 @@ Builder.load_string("""
 
         MDBottomNavigation:
             id: bottom_nav
+            type: "bottom"
+            panel_height: "80dp"
             size_hint_y: None
-            height: "72dp"
+            height: "80dp"
             md_bg_color: 0.122, 0.122, 0.129, 0.8
             panel_color: 0.122, 0.122, 0.129, 0.8
             selected_color: 0.678, 0.776, 1.0, 1
