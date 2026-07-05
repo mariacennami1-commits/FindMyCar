@@ -160,34 +160,76 @@ Builder.load_string("""
                     height: "56dp"
                     on_release: root.navigate_to_car()
 
-        MDBottomNavigation:
-            id: bottom_nav
-            type: "bottom"
-            panel_height: "80dp"
+        MDBoxLayout:
+            id: bottom_bar
             size_hint_y: None
-            height: "80dp"
+            height: "72dp"
             md_bg_color: 0.122, 0.122, 0.129, 0.8
-            panel_color: 0.122, 0.122, 0.129, 0.8
-            selected_color: 0.678, 0.776, 1.0, 1
-            unselected_color: 0.5, 0.5, 0.55, 1
+            spacing: 0
+            padding: 0
 
-            MDBottomNavigationItem:
-                name: "home_tab"
-                text: "Home"
-                icon: "home"
-                on_tab_press: root.go_home()
+            RelativeLayout:
+                size_hint_x: 1/3
+                on_touch_down: root._nav_tab("home") if self.collide_point(*args[1].pos) else None
 
-            MDBottomNavigationItem:
-                name: "history_tab"
-                text: "History"
-                icon: "history"
-                on_tab_press: root.go_to_history()
+                MDIcon:
+                    icon: "home"
+                    font_size: "24sp"
+                    theme_text_color: "Custom"
+                    text_color: 0.678, 0.776, 1.0, 1
+                    pos_hint: {"center_x": 0.5, "center_y": 0.65}
 
-            MDBottomNavigationItem:
-                name: "settings_tab"
-                text: "Settings"
-                icon: "cog"
-                on_tab_press: root.go_to_settings()
+                MDLabel:
+                    text: "Home"
+                    font_size: "10sp"
+                    halign: "center"
+                    valign: "center"
+                    theme_text_color: "Custom"
+                    text_color: 0.678, 0.776, 1.0, 1
+                    pos_hint: {"center_x": 0.5, "y": 0.02}
+                    size_hint_y: 0.3
+
+            RelativeLayout:
+                size_hint_x: 1/3
+                on_touch_down: root._nav_tab("history") if self.collide_point(*args[1].pos) else None
+
+                MDIcon:
+                    icon: "history"
+                    font_size: "24sp"
+                    theme_text_color: "Custom"
+                    text_color: 0.5, 0.5, 0.55, 1
+                    pos_hint: {"center_x": 0.5, "center_y": 0.65}
+
+                MDLabel:
+                    text: "History"
+                    font_size: "10sp"
+                    halign: "center"
+                    valign: "center"
+                    theme_text_color: "Custom"
+                    text_color: 0.5, 0.5, 0.55, 1
+                    pos_hint: {"center_x": 0.5, "y": 0.02}
+                    size_hint_y: 0.3
+
+            RelativeLayout:
+                size_hint_x: 1/3
+                on_touch_down: root._nav_tab("settings") if self.collide_point(*args[1].pos) else None
+
+                MDIcon:
+                    icon: "cog"
+                    font_size: "24sp"
+                    theme_text_color: "Custom"
+                    text_color: 0.5, 0.5, 0.55, 1
+                    pos_hint: {"center_x": 0.5, "center_y": 0.65}
+
+                MDLabel:
+                    text: "Settings"
+                    font_size: "10sp"
+                    halign: "center"
+                    valign: "center"
+                    theme_text_color: "Custom"
+                    text_color: 0.5, 0.5, 0.55, 1
+                    pos_hint: {"center_x": 0.5, "y": 0.02}
+                    size_hint_y: 0.3
 """)
 
 
@@ -273,6 +315,15 @@ class DetailsScreen(Screen):
 
     def go_to_settings(self):
         self._show_toast("Impostazioni in arrivo")
+
+    def _nav_tab(self, tab):
+        if tab == "home":
+            self.go_home()
+        elif tab == "history":
+            self.go_to_history()
+        elif tab == "settings":
+            self.go_to_settings()
+        return True
 
     def _get_app(self):
         try:
