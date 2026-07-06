@@ -304,15 +304,20 @@ class FindScreen(Screen):
     def start_navigation(self):
         try:
             if self._no_parking:
-                self._show_error("Nessuna auto salvata!")
+                self.direction_label = "Nessuna auto salvata!"
                 return
 
-            if not self.gps_service or not self.gps_service.has_fix():
-                self._show_error("GPS non disponibile")
+            if not self.gps_service:
+                self.direction_label = "GPS non disponibile"
+                return
+
+            if not self.gps_service.has_fix():
+                self.direction_label = "GPS in aggancio..."
                 return
 
             pos = self.gps_service.get_position()
             if not pos:
+                self.direction_label = "Posizione non disponibile"
                 return
 
             dist = NavigationService.distance_meters(
@@ -327,29 +332,15 @@ class FindScreen(Screen):
                 f"{direction} · {NavigationService.distance_string(dist)} · "
                 f"{NavigationService.time_estimate(dist)}"
             )
-            self._show_info(f"Direzione: {msg}")
+            self.direction_label = msg
         except Exception as e:
             Logger.error(f"FindScreen: Navigation error - {e}")
             import traceback
             Logger.error(f"FindScreen: {traceback.format_exc()}")
-            self._show_error("Errore navigazione")
+            self.direction_label = "Errore navigazione"
 
     def go_back(self):
         try:
             self.manager.current = "home"
         except Exception as e:
             Logger.error(f"FindScreen: go_back error - {e}")
-
-    def _show_error(self, msg):
-        try:
-            from kivymd.uix.snackbar import Snackbar
-            Snackbar(text=msg, duration=3).open()
-        except Exception as e:
-            Logger.error(f"FindScreen: show_error - {e}")
-
-    def _show_info(self, msg):
-        try:
-            from kivymd.uix.snackbar import Snackbar
-            Snackbar(text=msg, duration=3).open()
-        except Exception as e:
-            Logger.error(f"FindScreen: show_info - {e}")
