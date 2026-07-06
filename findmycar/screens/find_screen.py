@@ -301,6 +301,9 @@ class FindScreen(Screen):
             Logger.error(f"FindScreen: refresh_data error - {e}")
 
     def start_navigation(self):
+        Clock.schedule_once(lambda dt: self._do_navigation())
+
+    def _do_navigation(self):
         try:
             if self._no_parking:
                 self.direction_label = "Nessuna auto salvata!"
