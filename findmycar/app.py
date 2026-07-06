@@ -30,7 +30,7 @@ from .screens.details_screen import DetailsScreen
 from .ui.compass_widget import CompassWidget
 from .webview_bridge import WebViewBridge
 
-_APP_VERSION = "1.0.113"
+_APP_VERSION = "1.0.114"
 _CRASH_LOG = None
 Builder.load_string("""
 <DrawerItem>:
@@ -363,11 +363,32 @@ class FindMyCarApp(MDApp):
     def _do_update_check(self, show_ui=True):
         try:
             import json
-            import urllib.request
-            url = "https://api.github.com/repos/mariacennami1-commits/FindMyCar/releases/latest"
-            req = urllib.request.Request(url, headers={"User-Agent": "FindMyCar/1.0", "Accept": "application/vnd.github.v3+json"})
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = json.loads(resp.read().decode())
+            from kivy.utils import platform
+
+            if platform == "android":
+                from jnius import autoclass
+                URL = autoclass("java.net.URL")
+                BufferedReader = autoclass("java.io.BufferedReader")
+                InputStreamReader = autoclass("java.io.InputStreamReader")
+                url = URL("https://api.github.com/repos/mariacennami1-commits/FindMyCar/releases/latest")
+                conn = url.openConnection()
+                conn.setRequestProperty("User-Agent", "FindMyCar/1.0")
+                conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                conn.setConnectTimeout(10000)
+                reader = BufferedReader(InputStreamReader(conn.getInputStream()))
+                response = ""
+                line = reader.readLine()
+                while line is not None:
+                    response += line
+                    line = reader.readLine()
+                reader.close()
+                data = json.loads(response)
+            else:
+                import urllib.request
+                url = "https://api.github.com/repos/mariacennami1-commits/FindMyCar/releases/latest"
+                req = urllib.request.Request(url, headers={"User-Agent": "FindMyCar/1.0", "Accept": "application/vnd.github.v3+json"})
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read().decode())
 
             latest_tag = data.get("tag_name", "").lstrip("v")
             current = self.VERSION

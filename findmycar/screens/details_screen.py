@@ -268,6 +268,8 @@ class DetailsScreen(Screen):
         self.photo_path = photo_path
         if self._record:
             self._record.photo_path = photo_path
+            if self.storage_service:
+                self.storage_service._save()
         try:
             self.ids.photo_icon.icon = "image"
             self.ids.photo_label.text = "Foto aggiunta ✓"

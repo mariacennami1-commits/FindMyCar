@@ -133,6 +133,10 @@ class ParkScreen(Screen):
             self._photo_file = "car_" + uuid.uuid4().hex[:8] + ".jpg"
             from jnius import autoclass as _ajc
             self._capture_time_ms = _ajc("java.lang.System").currentTimeMillis()
+            self._photo_dest = os.path.join(
+                mActivity.getFilesDir().getAbsolutePath(),
+                self._photo_file,
+            )
 
             photo_uri = None
             try:
