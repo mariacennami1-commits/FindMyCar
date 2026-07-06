@@ -148,7 +148,8 @@ Builder.load_string("""
                         on_release: root.save_notes()
 
                 MDFlatButton:
-                    text: "PORTAMI ALL'AUTO"
+                    id: nav_btn
+                    text: root.nav_button_text
                     icon: "navigation"
                     font_size: "16sp"
                     bold: True
@@ -235,12 +236,14 @@ Builder.load_string("""
 
 class DetailsScreen(Screen):
     photo_path = StringProperty("")
+    nav_button_text = StringProperty("")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._record = None
         self.gps_service = None
         self.storage_service = None
+        self.nav_button_text = "Portami all\u2019auto"
 
     def on_enter(self):
         app = self._get_app()
