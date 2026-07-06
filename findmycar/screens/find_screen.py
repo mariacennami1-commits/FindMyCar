@@ -177,41 +177,59 @@ class FindScreen(Screen):
         self._no_parking = True
 
     def on_enter(self):
-        app = self._get_app()
-        if not app:
-            return
+        try:
+            app = self._get_app()
+            if not app:
+                return
 
-        self.gps_service = app.gps_service
-        self.storage_service = app.storage_service
-        self.offline_localizer = app.offline_localizer
+            self.gps_service = app.gps_service
+            self.storage_service = app.storage_service
+            self.offline_localizer = app.offline_localizer
 
-        latest = self.storage_service.get_latest()
-        if latest:
-            self._parked_lat = latest.latitude
-            self._parked_lon = latest.longitude
-            self._no_parking = False
-            self.address_text = latest.address or f"{latest.latitude:.4f}, {latest.longitude:.4f}"
-            self.car_position_text = f"Auto: {latest.latitude:.4f}, {latest.longitude:.4f}"
-        else:
-            self._no_parking = True
-            self.car_position_text = "Nessuna auto parcheggiata salvata"
-            self.address_text = ""
+            latest = self.storage_service.get_latest()
+            if latest:
+                self._parked_lat = latest.latitude
+                self._parked_lon = latest.longitude
+                self._no_parking = False
+                self.address_text = latest.address or f"{latest.latitude:.4f}, {latest.longitude:.4f}"
+                self.car_position_text = f"Auto: {latest.latitude:.4f}, {latest.longitude:.4f}"
+            else:
+                self._no_parking = True
+                self.car_position_text = "Nessuna auto parcheggiata salvata"
+                self.address_text = ""
 
-        self._gps_listener_active = True
-        self.gps_service.add_listener(self._on_gps_update)
-        self._update_clock = Clock.schedule_interval(self._update_navigation, 0.5)
+            if self.gps_service:
+                self._gps_listener_active = True
+                try:
+                    self.gps_service.add_listener(self._on_gps_update)
+                except Exception as e:
+                    Logger.error(f"FindScreen: add_listener error - {e}")
+                self._update_clock = Clock.schedule_interval(self._update_navigation, 0.5)
 
-        if self.gps_service.has_fix():
-            pos = self.gps_service.get_position()
-            if pos:
-                self._on_position(pos[0], pos[1])
+                if self.gps_service.has_fix():
+                    pos = self.gps_service.get_position()
+                    if pos:
+                        self._on_position(pos[0], pos[1])
+            else:
+                Logger.warning("FindScreen: gps_service is None")
+        except Exception as e:
+            Logger.error(f"FindScreen: on_enter error - {e}")
+            import traceback
+            Logger.error(f"FindScreen: {traceback.format_exc()}")
 
     def on_leave(self):
-        self._gps_listener_active = False
-        if self.gps_service:
-            self.gps_service.remove_listener(self._on_gps_update)
-        if self._update_clock:
-            self._update_clock.cancel()
+        try:
+            self._gps_listener_active = False
+            if self.gps_service:
+                try:
+                    self.gps_service.remove_listener(self._on_gps_update)
+                except Exception as e:
+                    Logger.error(f"FindScreen: remove_listener error - {e}")
+            if self._update_clock:
+                self._update_clock.cancel()
+                self._update_clock = None
+        except Exception as e:
+            Logger.error(f"FindScreen: on_leave error - {e}")
 
     def _get_app(self):
         try:
@@ -223,47 +241,65 @@ class FindScreen(Screen):
     def _on_gps_update(self, gps_svc):
         if not self._gps_listener_active:
             return
-        pos = gps_svc.get_position()
-        if pos:
-            self._on_position(pos[0], pos[1])
+        try:
+            pos = gps_svc.get_position()
+            if pos:
+                self._on_position(pos[0], pos[1])
+        except Exception as e:
+            Logger.error(f"FindScreen: gps_update error - {e}")
 
     def _on_position(self, lat, lon):
-        if self._no_parking:
-            return
+        try:
+            if self._no_parking or lat is None or lon is None:
+                return
 
-        dist = NavigationService.distance_meters(
-            lat, lon, self._parked_lat, self._parked_lon
-        )
-        bearing_to_car = NavigationService.bearing(
-            lat, lon, self._parked_lat, self._parked_lon
-        )
+            dist = NavigationService.distance_meters(
+                lat, lon, self._parked_lat, self._parked_lon
+            )
+            bearing_to_car = NavigationService.bearing(
+                lat, lon, self._parked_lat, self._parked_lon
+            )
 
-        self.distance_text = NavigationService.distance_string(dist)
-        self.time_text = NavigationService.time_estimate(dist)
-        self.direction_label = f"{NavigationService.direction_label(bearing_to_car)} ({bearing_to_car:.0f}°)"
+            self.distance_text = NavigationService.distance_string(dist)
+            self.time_text = NavigationService.time_estimate(dist)
+            self.direction_label = f"{NavigationService.direction_label(bearing_to_car)} ({bearing_to_car:.0f}°)"
 
-        if self.gps_service:
-            current_heading = self.gps_service.bearing or 0
-            relative = NavigationService.relative_bearing(current_heading, bearing_to_car)
-            compass = self.ids.compass
-            compass.target_bearing = bearing_to_car
-            compass.bearing = current_heading
+            if self.gps_service:
+                current_heading = self.gps_service.bearing or 0
+                try:
+                    compass = self.ids.compass
+                    compass.target_bearing = bearing_to_car
+                    compass.bearing = current_heading
+                except (AttributeError, KeyError):
+                    pass
+        except Exception as e:
+            Logger.error(f"FindScreen: on_position error - {e}")
 
     def _update_navigation(self, dt):
-        if self._no_parking or not self.gps_service:
-            return
+        try:
+            if self._no_parking or not self.gps_service:
+                return
 
-        pos = self.gps_service.get_position()
-        if not pos:
-            offline_pos, mode = self.offline_localizer.get_position() if self.offline_localizer else (None, None)
-            if offline_pos:
-                self._on_position(offline_pos[0], offline_pos[1])
-            return
+            pos = self.gps_service.get_position()
+            if not pos:
+                if self.offline_localizer:
+                    try:
+                        offline_pos, mode = self.offline_localizer.get_position()
+                        if offline_pos:
+                            self._on_position(offline_pos[0], offline_pos[1])
+                    except Exception as e:
+                        Logger.error(f"FindScreen: offline localizer error - {e}")
+                return
 
-        self._on_position(pos[0], pos[1])
+            self._on_position(pos[0], pos[1])
+        except Exception as e:
+            Logger.error(f"FindScreen: update_navigation error - {e}")
 
     def refresh_data(self):
-        self.on_enter()
+        try:
+            self.on_enter()
+        except Exception as e:
+            Logger.error(f"FindScreen: refresh_data error - {e}")
 
     def start_navigation(self):
         try:
@@ -299,12 +335,21 @@ class FindScreen(Screen):
             self._show_error("Errore navigazione")
 
     def go_back(self):
-        self.manager.current = "home"
+        try:
+            self.manager.current = "home"
+        except Exception as e:
+            Logger.error(f"FindScreen: go_back error - {e}")
 
     def _show_error(self, msg):
-        from kivymd.uix.snackbar import Snackbar
-        Snackbar(text=msg, duration=3).open()
+        try:
+            from kivymd.uix.snackbar import Snackbar
+            Snackbar(text=msg, duration=3).open()
+        except Exception as e:
+            Logger.error(f"FindScreen: show_error - {e}")
 
     def _show_info(self, msg):
-        from kivymd.uix.snackbar import Snackbar
-        Snackbar(text=msg, duration=3).open()
+        try:
+            from kivymd.uix.snackbar import Snackbar
+            Snackbar(text=msg, duration=3).open()
+        except Exception as e:
+            Logger.error(f"FindScreen: show_info - {e}")

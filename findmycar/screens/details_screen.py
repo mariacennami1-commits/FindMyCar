@@ -268,17 +268,22 @@ class DetailsScreen(Screen):
         self.manager.current = "park"
 
     def _on_photo_taken(self, photo_path):
-        self.photo_path = photo_path
-        if self._record:
-            self._record.photo_path = photo_path
-            if self.storage_service:
-                self.storage_service._save()
         try:
-            self.ids.photo_icon.icon = "image"
-            self.ids.photo_label.text = "Foto aggiunta ✓"
-        except:
-            pass
-        self.manager.current = "find"
+            self.photo_path = photo_path
+            if self._record:
+                self._record.photo_path = photo_path
+                if self.storage_service:
+                    self.storage_service._save()
+            try:
+                self.ids.photo_icon.icon = "image"
+                self.ids.photo_label.text = "Foto aggiunta ✓"
+            except:
+                pass
+            self.manager.current = "find"
+        except Exception as e:
+            Logger.error(f"DetailsScreen: on_photo_taken error - {e}")
+            import traceback
+            Logger.error(f"DetailsScreen: {traceback.format_exc()}")
 
     def save_notes(self):
         if not self._record or not self.storage_service:
