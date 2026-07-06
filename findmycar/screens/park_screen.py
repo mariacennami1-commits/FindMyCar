@@ -128,7 +128,6 @@ class ParkScreen(Screen):
 
             Intent = autoclass("android.content.Intent")
             MediaStore = autoclass("android.provider.MediaStore")
-            ContentValues = autoclass("android.content.ContentValues")
 
             self._photo_file = "car_" + uuid.uuid4().hex[:8] + ".jpg"
             from jnius import autoclass as _ajc
@@ -138,35 +137,12 @@ class ParkScreen(Screen):
                 self._photo_file,
             )
 
-            photo_uri = None
-            try:
-                resolver = mActivity.getContentResolver()
-                values = ContentValues()
-                values.put(MediaStore.Images.Media.DISPLAY_NAME, self._photo_file)
-                values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                photo_uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-            except Exception as e:
-                Logger.warning("ParkScreen: MediaStore insert failed: " + str(e))
-
-            self._photo_uri_str = str(photo_uri.toString()) if photo_uri is not None else None
-            if self._photo_uri_str:
-                Logger.info("ParkScreen: Created MediaStore URI=" + self._photo_uri_str)
-            else:
-                Logger.info("ParkScreen: No MediaStore URI, using fallback")
-
             intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-            if photo_uri is not None:
-                intent.putExtra(MediaStore.EXTRA_OUTPUT, photo_uri)
-                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                Logger.info("ParkScreen: Intent with EXTRA_OUTPUT")
-            else:
-                Logger.info("ParkScreen: Intent without EXTRA_OUTPUT")
 
             activity.unbind(on_activity_result=self._on_camera_result)
             activity.bind(on_activity_result=self._on_camera_result)
             mActivity.startActivityForResult(intent, 0x1234)
-            Logger.info("ParkScreen: Camera intent launched, capture_time=" + str(self._capture_time_ms))
+            Logger.info("ParkScreen: Camera intent launched")
         except Exception as e:
             Logger.warning("ParkScreen: Camera launch error - " + str(e))
             import traceback
@@ -182,122 +158,76 @@ class ParkScreen(Screen):
         except:
             pass
 
-        Logger.info("ParkScreen: Camera result - code=" + str(resultCode) + " intent=" + str(intent))
+        Logger.info("ParkScreen: Camera result - code=" + str(resultCode))
 
         if resultCode == -1:
             try:
                 from jnius import autoclass
-
                 PythonActivity = autoclass("org.kivy.android.PythonActivity")
                 mActivity = PythonActivity.mActivity
-                resolver = mActivity.getContentResolver()
-                MediaStore = autoclass("android.provider.MediaStore")
                 Bitmap = autoclass("android.graphics.Bitmap")
                 BitmapFactory = autoclass("android.graphics.BitmapFactory")
                 FileOutputStream = autoclass("java.io.FileOutputStream")
-                Uri = autoclass("android.net.Uri")
 
-                # Try reading from our MediaStore URI first (EXTRA_OUTPUT approach)
-                uri_str = getattr(self, '_photo_uri_str', None)
-                if uri_str:
-                    Logger.info("ParkScreen: Trying MediaStore URI=" + uri_str)
-                    uri = Uri.parse(uri_str)
-                    istream = resolver.openInputStream(uri)
-                    if istream is not None:
-                        bitmap = BitmapFactory.decodeStream(istream)
-                        istream.close()
-                        if bitmap is not None:
-                            dest = os.path.join(
-                                PythonActivity.mActivity.getFilesDir().getAbsolutePath(),
-                                self._photo_file,
-                            )
-                            fos = FileOutputStream(dest)
-                            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
+                # Strategy 1: thumbnail from intent extras (works on all devices)
+                if intent is not None:
+                    extras = intent.getExtras()
+                    Logger.info("ParkScreen: extras=" + str(extras))
+                    if extras is not None and extras.containsKey("data"):
+                        data = extras.get("data")
+                        Logger.info("ParkScreen: Got thumbnail=" + str(data))
+                        if data is not None:
+                            fos = FileOutputStream(self._photo_dest)
+                            data.compress(Bitmap.CompressFormat.JPEG, 90, fos)
                             fos.close()
-                            self._photo_path = dest
+                            self._photo_path = self._photo_dest
                             self.photo_text = "Foto aggiunta ✓"
-                            Logger.info("ParkScreen: Photo saved from MediaStore URI")
+                            Logger.info("ParkScreen: Photo saved from extras")
                             return
 
-                # Fallback: try thumbnail from intent extras
-                extras = intent.getExtras() if intent is not None else None
-                Logger.info("ParkScreen: extras=" + str(extras))
-                if extras is not None:
-                    data = extras.get("data")
-                    Logger.info("ParkScreen: extras data=" + str(data))
-                    if data is not None:
-                        dest = os.path.join(
-                            PythonActivity.mActivity.getFilesDir().getAbsolutePath(),
-                            self._photo_file,
-                        )
-                        fos = FileOutputStream(dest)
-                        data.compress(Bitmap.CompressFormat.JPEG, 90, fos)
-                        fos.close()
-                        self._photo_path = dest
-                        self.photo_text = "Foto aggiunta ✓"
-                        Logger.info("ParkScreen: Photo saved from thumbnail extras")
-                        return
-
-                # Fallback: scan MediaStore for recent photo
+                # Strategy 2: scan MediaStore for recent photo (full resolution)
                 Logger.info("ParkScreen: Scanning MediaStore for recent photo")
-                time_window_s = 120
-                selection = MediaStore.Images.Media.DATE_ADDED + " > " + str(int(self._capture_time_ms / 1000) - time_window_s)
+                resolver = mActivity.getContentResolver()
+                MediaStore = autoclass("android.provider.MediaStore")
+                Uri = autoclass("android.net.Uri")
+
+                time_window_s = 60
+                selection = MediaStore.Images.Media.DATE_ADDED + " > ?"
+                selection_args = [str(int(self._capture_time_ms / 1000) - time_window_s)]
                 cursor = resolver.query(
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                     None,
                     selection,
-                    None,
+                    selection_args,
                     MediaStore.Images.Media.DATE_ADDED + " DESC",
                 )
-                Logger.info("ParkScreen: Cursor(window)=" + str(cursor))
-                found = False
-                if cursor is not None and cursor.moveToFirst():
-                    found = self._copy_from_cursor(cursor, resolver, MediaStore, Bitmap, BitmapFactory, FileOutputStream)
-                    cursor.close()
-                if not found:
-                    Logger.info("ParkScreen: Time-window query returned nothing, trying latest photo")
-                    cursor = resolver.query(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        None,
-                        None,
-                        None,
-                        MediaStore.Images.Media.DATE_ADDED + " DESC",
-                    )
-                    if cursor is not None and cursor.moveToFirst():
-                        found = self._copy_from_cursor(cursor, resolver, MediaStore, Bitmap, BitmapFactory, FileOutputStream)
+                if cursor is not None:
+                    if cursor.moveToFirst():
+                        photo_id = cursor.getLong(cursor.getColumnIndex("_id"))
+                        uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI.buildUpon().appendPath(
+                            str(photo_id)
+                        ).build()
                         cursor.close()
-                if found:
-                    return
+                        istream = resolver.openInputStream(uri)
+                        if istream is not None:
+                            bitmap = BitmapFactory.decodeStream(istream)
+                            istream.close()
+                            if bitmap is not None:
+                                fos = FileOutputStream(self._photo_dest)
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
+                                fos.close()
+                                self._photo_path = self._photo_dest
+                                self.photo_text = "Foto aggiunta ✓"
+                                Logger.info("ParkScreen: Photo saved from MediaStore scan")
+                                return
+                    else:
+                        cursor.close()
             except Exception as e:
                 Logger.error("ParkScreen: Save error - " + str(e))
                 import traceback
-                Logger.error("ParkScreen: Traceback - " + str(traceback.format_exc()))
+                Logger.error("ParkScreen: Traceback - " + traceback.format_exc())
 
         self.photo_text = "Foto non acquisita"
-
-    def _copy_from_cursor(self, cursor, resolver, MediaStore, Bitmap, BitmapFactory, FileOutputStream):
-        try:
-            uri_str = cursor.getString(cursor.getColumnIndex("_data"))
-            photo_id = cursor.getLong(cursor.getColumnIndex("_id"))
-            Logger.info("ParkScreen: Found photo _id=" + str(photo_id) + " path=" + str(uri_str))
-            uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI.buildUpon().appendPath(
-                str(photo_id)
-            ).build()
-            istream = resolver.openInputStream(uri)
-            if istream is not None:
-                bitmap = BitmapFactory.decodeStream(istream)
-                istream.close()
-                if bitmap is not None:
-                    fos = FileOutputStream(self._photo_dest)
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
-                    fos.close()
-                    self._photo_path = self._photo_dest
-                    self.photo_text = "Foto aggiunta ✓"
-                    Logger.info("ParkScreen: Photo saved from gallery scan")
-                    return True
-        except Exception as e:
-            Logger.error("ParkScreen: _copy_from_cursor error - " + str(e))
-        return False
 
     def confirm_photo(self):
         if self._callback and self._photo_path:

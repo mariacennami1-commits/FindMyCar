@@ -4,7 +4,7 @@ package.name = findmycar
 package.domain = com.findmycar
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
-version = 1.0.115
+version = 1.0.116
 requirements = python3,kivy,kivymd,plyer,pyjnius,pillow==12.2.0,sdl2_fix
 orientation = portrait
 osx.python_version = 3
@@ -18,7 +18,7 @@ android.api = 34
 android.minapi = 21
 android.ndk = 25c
 android.archs = arm64-v8a
-android.permissions = ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, ACCESS_BACKGROUND_LOCATION, CAMERA, INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE
+android.permissions = ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, ACCESS_BACKGROUND_LOCATION, CAMERA, INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, READ_MEDIA_IMAGES, POST_NOTIFICATIONS
 android.gradle_api_version = 34
 android.wakelock = True
 android.add_background_location = True

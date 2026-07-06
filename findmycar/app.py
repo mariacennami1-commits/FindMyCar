@@ -30,7 +30,7 @@ from .screens.details_screen import DetailsScreen
 from .ui.compass_widget import CompassWidget
 from .webview_bridge import WebViewBridge
 
-_APP_VERSION = "1.0.115"
+_APP_VERSION = "1.0.116"
 _CRASH_LOG = None
 Builder.load_string("""
 <DrawerItem>:
@@ -458,16 +458,32 @@ class FindMyCarApp(MDApp):
                 self._show_snackbar("Apri browser: " + apk_url)
                 return
             from jnius import autoclass
-            Intent = autoclass("android.content.Intent")
-            Uri = autoclass("android.net.Uri")
-            intent = Intent(Intent.ACTION_VIEW)
-            intent.setData(Uri.parse(apk_url))
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             from android import mActivity
-            mActivity.startActivity(intent)
+
+            DownloadManager = autoclass("android.app.DownloadManager")
+            Request = autoclass("android.app.DownloadManager$Request")
+            Uri = autoclass("android.net.Uri")
+
+            dm = mActivity.getSystemService(mActivity.DOWNLOAD_SERVICE)
+            request = Request(Uri.parse(apk_url))
+            request.setTitle("FindMyCar")
+            request.setDescription("Scaricamento aggiornamento...")
+            request.setNotificationVisibility(Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            request.setMimeType("application/vnd.android.package-archive")
+            dm.enqueue(request)
+
+            self._show_snackbar("Download avviato. Apri le notifiche per installare.")
         except Exception as e:
-            Logger.error(f"App: Open browser error - {e}")
-            self._show_snackbar(f"Apri manualmente: {apk_url}")
+            Logger.error(f"App: Download error - {e}")
+            try:
+                Intent = autoclass("android.content.Intent")
+                Uri = autoclass("android.net.Uri")
+                intent = Intent(Intent.ACTION_VIEW)
+                intent.setData(Uri.parse(apk_url))
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                mActivity.startActivity(intent)
+            except:
+                self._show_snackbar(f"Apri manualmente: {apk_url}")
 
     def _show_snackbar(self, msg):
         try:
