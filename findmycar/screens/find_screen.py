@@ -144,7 +144,6 @@ Builder.load_string("""
 
             MDFlatButton:
                 text: "AVVIA NAVIGAZIONE"
-                icon: "navigation"
                 font_size: "16sp"
                 bold: True
                 size_hint_y: None
