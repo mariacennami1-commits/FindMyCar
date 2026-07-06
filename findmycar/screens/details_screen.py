@@ -278,7 +278,7 @@ class DetailsScreen(Screen):
             self.ids.photo_label.text = "Foto aggiunta ✓"
         except:
             pass
-        self.manager.current = "details"
+        self.manager.current = "find"
 
     def save_notes(self):
         if not self._record or not self.storage_service:

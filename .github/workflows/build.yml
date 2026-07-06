@@ -87,9 +87,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          TAG="v1.0.${{ github.run_number }}"
+          VERSION=$(grep -oP '^version\s*=\s*\K.+' buildozer.spec | tr -d ' ')
+          TAG="v$VERSION"
           gh release create "$TAG" \
             --repo "${{ github.repository }}" \
-            --title "Build #${{ github.run_number }}" \
+            --title "$TAG" \
             --notes "APK automatico dal commit ${{ github.sha }}" \
             bin/*.apk || echo "Release already exists, skipping"

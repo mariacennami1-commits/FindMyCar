@@ -17,6 +17,7 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.list import MDList
 from kivy.uix.widget import Widget
 import os
+import re
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from .services.gps_service import GPSService
@@ -30,7 +31,7 @@ from .screens.details_screen import DetailsScreen
 from .ui.compass_widget import CompassWidget
 from .webview_bridge import WebViewBridge
 
-_APP_VERSION = "1.0.116"
+_APP_VERSION = "1.0.132"
 _CRASH_LOG = None
 Builder.load_string("""
 <DrawerItem>:
@@ -390,12 +391,19 @@ class FindMyCarApp(MDApp):
                 with urllib.request.urlopen(req, timeout=10) as resp:
                     data = json.loads(resp.read().decode())
 
-            latest_tag = data.get("tag_name", "").lstrip("v")
             current = self.VERSION
-            Logger.info(f"App: Update check - current={current} latest={latest_tag}")
+            latest_apk_version = current
+            for a in data.get("assets", []):
+                name = a.get("name", "")
+                if name.endswith(".apk"):
+                    m = re.search(r"findmycar-([\d.]+)-", name)
+                    if m:
+                        latest_apk_version = m.group(1)
+                        break
+            Logger.info(f"App: Update check - current={current} latest_apk={latest_apk_version}")
 
-            if self._is_newer(latest_tag, current):
-                msg = f"Aggiornamento disponibile: v{latest_tag}"
+            if self._is_newer(latest_apk_version, current):
+                msg = f"Aggiornamento disponibile: v{latest_apk_version}"
                 Logger.info(f"App: {msg}")
                 self._show_update_dialog(data)
             elif show_ui:

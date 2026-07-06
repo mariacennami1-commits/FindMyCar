@@ -266,31 +266,37 @@ class FindScreen(Screen):
         self.on_enter()
 
     def start_navigation(self):
-        if self._no_parking:
-            self._show_error("Nessuna auto salvata!")
-            return
+        try:
+            if self._no_parking:
+                self._show_error("Nessuna auto salvata!")
+                return
 
-        if not self.gps_service or not self.gps_service.has_fix():
-            self._show_error("GPS non disponibile")
-            return
+            if not self.gps_service or not self.gps_service.has_fix():
+                self._show_error("GPS non disponibile")
+                return
 
-        pos = self.gps_service.get_position()
-        if not pos:
-            return
+            pos = self.gps_service.get_position()
+            if not pos:
+                return
 
-        dist = NavigationService.distance_meters(
-            pos[0], pos[1], self._parked_lat, self._parked_lon
-        )
-        bearing = NavigationService.bearing(
-            pos[0], pos[1], self._parked_lat, self._parked_lon
-        )
+            dist = NavigationService.distance_meters(
+                pos[0], pos[1], self._parked_lat, self._parked_lon
+            )
+            bearing = NavigationService.bearing(
+                pos[0], pos[1], self._parked_lat, self._parked_lon
+            )
 
-        direction = NavigationService.direction_label(bearing)
-        msg = (
-            f"{direction} · {NavigationService.distance_string(dist)} · "
-            f"{NavigationService.time_estimate(dist)}"
-        )
-        self._show_info(f"Direzione: {msg}")
+            direction = NavigationService.direction_label(bearing)
+            msg = (
+                f"{direction} · {NavigationService.distance_string(dist)} · "
+                f"{NavigationService.time_estimate(dist)}"
+            )
+            self._show_info(f"Direzione: {msg}")
+        except Exception as e:
+            Logger.error(f"FindScreen: Navigation error - {e}")
+            import traceback
+            Logger.error(f"FindScreen: {traceback.format_exc()}")
+            self._show_error("Errore navigazione")
 
     def go_back(self):
         self.manager.current = "home"
